@@ -13,6 +13,8 @@ import type {RuntimeAssets} from './types.js';
 const XR_BLOCKS_VENDOR_ROOT = './vendor/xrblocks';
 const XR_BLOCKS_IMPORT = './vendor/xrblocks/build/xrblocks.js';
 const XR_BLOCKS_ADDONS_IMPORT = `${XR_BLOCKS_VENDOR_ROOT}/build/addons/`;
+const THREE_PATHFINDING_IMPORT =
+  './vendor/three-pathfinding/dist/three-pathfinding.module.js';
 
 export type MaterializedAppWorkspace = {
   rootDir: string;
@@ -23,6 +25,7 @@ export type MaterializedAppWorkspace = {
 export async function materializeAppWorkspace(options: {
   appDir: string;
   xrblocksRoot?: string;
+  simulatorNavMesh?: boolean;
 }): Promise<MaterializedAppWorkspace> {
   const sourceAppDir = path.resolve(options.appDir);
   await requireDir(sourceAppDir, 'XR Blocks app directory');
@@ -33,6 +36,7 @@ export async function materializeAppWorkspace(options: {
   const runtime = await resolveSessionRuntimeAssets({
     appDir: sourceAppDir,
     xrblocksRoot: options.xrblocksRoot,
+    simulatorNavMesh: options.simulatorNavMesh,
   });
   const rootDir = await mkdtemp(path.join(os.tmpdir(), 'xrblocks-devtools-'));
 
@@ -50,6 +54,12 @@ export async function materializeAppWorkspace(options: {
       path.join(vendorDir, 'xrblocks')
     );
     await replaceWithSymlink(runtime.threeDir, path.join(vendorDir, 'three'));
+    if (runtime.threePathfindingDir) {
+      await replaceWithSymlink(
+        runtime.threePathfindingDir,
+        path.join(vendorDir, 'three-pathfinding')
+      );
+    }
   } catch (error) {
     await rm(rootDir, {recursive: true, force: true});
     throw error;
@@ -105,7 +115,7 @@ function rewriteXrblocksHtmlReferences(
   sourceHtmlDir: string,
   runtime: RuntimeAssets
 ) {
-  const rewrittenImportMaps = rewriteXrblocksImportMapValues(html);
+  const rewrittenImportMaps = rewriteXrblocksImportMapValues(html, runtime);
   return rewrittenImportMaps.replace(
     /(["'])([^"']+)(\1)/g,
     (match, openQuote: string, importValue: string, closeQuote: string) => {
@@ -119,7 +129,7 @@ function rewriteXrblocksHtmlReferences(
   );
 }
 
-function rewriteXrblocksImportMapValues(html: string) {
+function rewriteXrblocksImportMapValues(html: string, runtime: RuntimeAssets) {
   return html.replace(
     /(<script\b[^>]*\btype=["']importmap["'][^>]*>)([\s\S]*?)(<\/script>)/gi,
     (match, openTag: string, content: string, closeTag: string) => {
@@ -140,6 +150,10 @@ function rewriteXrblocksImportMapValues(html: string) {
       }
       if (Object.hasOwn(importMap.imports, 'xrblocks/addons/')) {
         importMap.imports['xrblocks/addons/'] = XR_BLOCKS_ADDONS_IMPORT;
+        changed = true;
+      }
+      if (runtime.threePathfindingDir) {
+        importMap.imports['three-pathfinding'] = THREE_PATHFINDING_IMPORT;
         changed = true;
       }
 

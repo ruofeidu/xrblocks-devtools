@@ -20,6 +20,7 @@ speech are optional:
 ```bash
 npm install --save-dev @google/genai # session.act() and the agent command
 npm install --save-dev tiny-tts      # injectAudio({text})
+npm install --save-dev three-pathfinding # --simulator-navmesh
 ```
 
 The relevant feature gives a clear install error when either package is
@@ -89,7 +90,7 @@ xrblocks-devtools interact (--app-dir <dir> | --url <url>) [options]
 | `--monitor-audio`                    | Play injected microphone audio through Chromium output. Default false.                                         |
 | `--no-realtime`                      | Disable real-time embodied-control pacing. Real-time pacing is enabled by default.                             |
 | `--simulator-reach-limit`            | Enforce the simulator hand-reach radius.                                                                       |
-| `--simulator-navmesh`                | Load and enforce the active simulator environment navmesh for `navigateTo()`.                                  |
+| `--simulator-navmesh`                | Reload the active simulator environment with its navmesh enabled, then constrain `navigateTo()`.               |
 | `--embodied-control-import <module>` | Browser-loadable module specifier or URL for the embodied-control addon. Useful for URL sessions.              |
 | `--timeout-ms <ms>`                  | Browser startup and operation timeout. Default `30000`.                                                        |
 | `--record-video <path>`              | Record action windows. Trimming targets MP4 when ffmpeg is available.                                          |

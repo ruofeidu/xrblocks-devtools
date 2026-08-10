@@ -196,12 +196,7 @@ describe('Session interface', () => {
     });
     expect(invoke).toHaveBeenCalledWith('stepControl', {
       durationMs: 500,
-      control: {
-        rightHand: {
-          pose: 'neutral',
-          rotations: {wrist: [0.1, 0.2, 0.3]},
-        },
-      },
+      control: {rightHand: {rotations: {wrist: [0.1, 0.2, 0.3]}}},
     });
     expect(() =>
       session.setHandPose('right', {

@@ -95,6 +95,7 @@ export type RuntimeAssets = {
   xrblocksRoot: string;
   xrblocksBuildDir: string;
   threeDir: string;
+  threePathfindingDir?: string;
 };
 
 export type Vec3Tuple = [x: number, y: number, z: number];

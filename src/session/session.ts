@@ -168,6 +168,7 @@ export class XRBlocksSession {
         this.workspace = await this.dependencies.materializeWorkspace({
           appDir: this.config.appDir,
           xrblocksRoot: this.config.xrblocksRoot,
+          simulatorNavMesh: this.config.simulatorNavMesh,
         });
         signal?.throwIfAborted();
         appDir = this.config.appDir;
@@ -408,7 +409,7 @@ export class XRBlocksSession {
     return this.recordAction('setHandPose', {hand, rotations}, () =>
       this.requireRuntime().invoke('stepControl', {
         durationMs: HAND_POSE_TRANSITION_MS,
-        control: {[normalizedHand]: {pose: 'neutral', rotations}},
+        control: {[normalizedHand]: {rotations}},
       })
     );
   }
