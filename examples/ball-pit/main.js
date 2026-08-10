@@ -59,7 +59,7 @@ class BallShooter extends xb.Script {
   spawnBallAt(
     position,
     velocity = new THREE.Vector3(),
-    now = performance.now()
+    now = xb.getElapsedTime() * 1000
   ) {
     const index = this.nextBall;
     const sphere = this.spheres[index];
@@ -102,7 +102,7 @@ class BallShooter extends xb.Script {
     this.colliders[index] = collider;
   }
 
-  physicsStep(now = performance.now()) {
+  physicsStep(now = xb.getElapsedTime() * 1000) {
     for (let i = 0; i < this.spheres.length; i += 1) {
       const sphere = this.spheres[i];
       const body = this.rigidBodies[i];
@@ -244,7 +244,7 @@ class WorldBallsDemo extends xb.Script {
   }
 
   controllerUpdate(controller) {
-    const now = performance.now();
+    const now = xb.getElapsedTime() * 1000;
     if (!this.lastBallCreatedTimeForController.has(controller)) {
       this.lastBallCreatedTimeForController.set(controller, -99);
     }
