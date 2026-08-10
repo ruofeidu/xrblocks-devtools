@@ -36,7 +36,7 @@ export type ParsedCommand =
       assetsDir?: string;
       xrblocksRoot?: string;
     }
-  | {kind: 'interact'; session: XRBlocksSessionConfig}
+  | {kind: 'interact'; session: XRBlocksSessionConfig; envFile?: string}
   | {
       kind: 'agent';
       session: XRBlocksSessionConfig;
@@ -44,6 +44,7 @@ export type ParsedCommand =
       model?: string;
       maxTurns?: number;
       apiKey?: string;
+      envFile?: string;
       context: AgentObservationKind[];
       quiet: boolean;
     };
@@ -98,6 +99,10 @@ const recordingFlags = [
   flag('no-trim-video', 'boolean', 'Do not trim the Playwright video'),
 ] as const;
 
+const environmentFlags = [
+  flag('env-file', 'string', 'Load variables from this env file', 'path'),
+] as const;
+
 const definitions: Record<CommandName, CommandDefinition> = {
   visualize: {
     name: 'visualize',
@@ -126,7 +131,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
     name: 'interact',
     usage: 'interact (--app-dir <dir> | --url <url>) [options]',
     summary: 'Open Interactive Mode for a Session.',
-    flags: [...sessionFlags, ...recordingFlags],
+    flags: [...sessionFlags, ...recordingFlags, ...environmentFlags],
   },
   agent: {
     name: 'agent',
@@ -135,6 +140,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
     flags: [
       ...sessionFlags,
       ...recordingFlags,
+      ...environmentFlags,
       flag('task', 'string', 'Describe the task for the agent', 'text'),
       flag('model', 'string', 'Select the model', 'model'),
       flag('max-turns', 'number', 'Limit model turns', 'count'),
@@ -206,7 +212,13 @@ export function parseCommand(
     throw new Error(`Unexpected argument: ${parsed.positionals[0]}`);
   }
   const session = sessionConfig(parsed.flags, name, signal);
-  if (name === 'interact') return {kind: name, session};
+  if (name === 'interact') {
+    return {
+      kind: name,
+      session,
+      envFile: stringValue(parsed.flags, 'env-file'),
+    };
+  }
 
   const task = stringValue(parsed.flags, 'task');
   if (!task) throw new Error('Agent requires --task.');
@@ -217,6 +229,7 @@ export function parseCommand(
     model: stringValue(parsed.flags, 'model'),
     maxTurns: numberValue(parsed.flags, 'max-turns'),
     apiKey: stringValue(parsed.flags, 'api-key'),
+    envFile: stringValue(parsed.flags, 'env-file'),
     context: parseAgentObservations(stringValue(parsed.flags, 'observations')),
     quiet: Boolean(parsed.flags.quiet),
   };

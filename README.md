@@ -180,6 +180,7 @@ xrblocks-devtools interact (--app-dir <dir> | --url <url>) [options]
 | `--record-video-padding-ms <ms>`     | Time retained before and after actions. Default `500`.                                                         |
 | `--keep-raw-video`                   | Preserve Playwright's raw WebM after successful trimming.                                                      |
 | `--no-trim-video`                    | Keep the complete WebM. A non-WebM output name is changed to `.webm`.                                          |
+| `--env-file <path>`                  | Load variables from one optional environment file.                                                             |
 | `-h`, `--help`                       | Show flags and REPL functions.                                                                                 |
 
 The prompt is a JavaScript REPL. Call functions directly; returned promises are
@@ -214,8 +215,11 @@ The agent command accepts all Interact session and recording flags plus:
 | `--quiet`                | Suppress progress events on stderr.                                                                                 |
 | `-h`, `--help`           | Show command help.                                                                                                  |
 
-The CLI reads `.env` from the current directory with Node's built-in environment
-loader. It checks the key and optional GenAI package before opening Chromium.
+For `interact` and `agent`, the CLI loads the first available environment file:
+an explicit `--env-file`, `<app-dir>/.env`, or `./.env`. A missing file is not
+an error. Existing shell variables take priority over file values, and
+`--api-key` takes priority over `GEMINI_API_KEY`. Only `agent` requires the key
+before opening Chromium; `interact` can start without it.
 
 ## Interactive function reference
 

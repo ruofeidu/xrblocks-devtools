@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import {realpathSync} from 'node:fs';
 import path from 'node:path';
-import {loadEnvFile, stdin} from 'node:process';
+import {stdin} from 'node:process';
 import {fileURLToPath} from 'node:url';
 import {requireGeminiApiKey, requireGeminiSdk} from './agent.js';
 import {XRBlocksSession} from './session/index.js';
 import {commandHelp, parseCommand} from './command-config.js';
+import {loadProjectEnv} from './env.js';
 import {runInteractive, interactiveHelpText} from './interactive.js';
 import {installInterruptHandlers} from './signals.js';
 import {visualize} from './visualize/index.js';
@@ -45,10 +46,17 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       return 0;
     }
     case 'interact':
+      loadProjectEnv({
+        appDir: command.session.appDir,
+        envFile: command.envFile,
+      });
       await runInteractive(command.session);
       return 0;
     case 'agent': {
-      loadProjectEnv();
+      loadProjectEnv({
+        appDir: command.session.appDir,
+        envFile: command.envFile,
+      });
       requireGeminiApiKey(command.apiKey);
       await requireGeminiSdk();
       const session = await XRBlocksSession.open(command.session);
@@ -73,14 +81,6 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       );
       return result.status === 'succeeded' ? 0 : 1;
     }
-  }
-}
-
-function loadProjectEnv() {
-  try {
-    loadEnvFile(path.resolve(process.cwd(), '.env'));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
 }
 

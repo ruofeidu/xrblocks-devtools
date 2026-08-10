@@ -24,9 +24,12 @@ describe('command configuration interface', () => {
       'run.mp4',
       '--keep-raw-video',
       '--simulator-navmesh',
+      '--env-file',
+      'agent.env',
     ]);
     expect(command).toEqual({
       kind: 'interact',
+      envFile: 'agent.env',
       session: expect.objectContaining({
         url: 'http://example.test',
         headless: true,
@@ -66,6 +69,7 @@ describe('command configuration interface', () => {
       model: undefined,
       maxTurns: undefined,
       apiKey: undefined,
+      envFile: undefined,
     });
   });
 
