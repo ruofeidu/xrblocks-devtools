@@ -33,6 +33,28 @@ npm install --save-dev tiny-tts      # injectAudio({text})
 npm install --save-dev three-pathfinding # --simulator-navmesh
 ```
 
+### Optional FFmpeg installation
+
+FFmpeg is required to make trimmed down MP4 recordings that remove any non-action pauses:
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Debian or Ubuntu
+sudo apt-get install ffmpeg
+```
+
+On other systems, install an FFmpeg distribution and make sure the `ffmpeg`
+executable is on `PATH`. Confirm the installation with:
+
+```bash
+ffmpeg -version
+```
+
+Without FFmpeg, recording still works, but Devtools preserves the complete raw
+WebM instead of producing a trimmed MP4.
+
 ### Install from a source checkout
 
 To develop Devtools itself using its pinned XR Blocks dependency:

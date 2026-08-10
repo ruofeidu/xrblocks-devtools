@@ -79,6 +79,9 @@ application receives audio through the synthetic microphone path.
 
 ## Recording
 
+FFmpeg must be installed and available on `PATH` to trim recorded action
+windows and encode MP4 output:
+
 ```bash
 xrblocks-devtools interact \
   --app-dir ./app \
