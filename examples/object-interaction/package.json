@@ -2,10 +2,6 @@
   "name": "@xrblocks/devtools-example-object-interaction",
   "private": true,
   "type": "module",
-  "scripts": {
-    "interact": "xrblocks-devtools interact --app-dir . --xrblocks-root ../../../xrblocks --headed",
-    "agent": "xrblocks-devtools agent --app-dir . --xrblocks-root ../../../xrblocks --task \"Move both colored cubes to their matching targets and confirm success\" --headed"
-  },
   "devDependencies": {
     "@xrblocks/devtools": "file:../.."
   }

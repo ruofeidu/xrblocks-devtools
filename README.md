@@ -1,21 +1,31 @@
 # XR Blocks Devtools
 
-Standalone Node.js tools for previewing, running, observing, and controlling XR
-Blocks applications. Devtools owns browser Sessions and preview rendering.
-Benchmarks own test cases, assertions, and scoring.
+Standalone tools for previewing, running, observing, and controlling XR
+Blocks applications. Designed to support agentic coding and testing.
 
 ## Install
+
+### Install from npm
+
+Install Devtools in the XR Blocks application that will use it:
 
 ```bash
 npm install --save-dev @xrblocks/devtools
 npx playwright install chromium
 ```
 
-The CLI is `xrblocks-devtools`. Node.js 20.19 or newer is required.
+Run the local CLI through `npx`:
+
+```bash
+npx xrblocks-devtools help
+```
+
+The package exposes the `xrblocks-devtools` CLI.
 
 Install XR Blocks and Three.js in the application, or pass `--xrblocks-root`
-when working against a source checkout. Natural-language actions and text to
-speech are optional:
+when working against a source checkout.
+
+The following are optional dependencies that add additional functionality to XR Blocks Devtools.
 
 ```bash
 npm install --save-dev @google/genai # session.act() and the agent command
@@ -23,13 +33,25 @@ npm install --save-dev tiny-tts      # injectAudio({text})
 npm install --save-dev three-pathfinding # --simulator-navmesh
 ```
 
-The relevant feature gives a clear install error when either package is
-absent. WAV audio injection does not need TinyTTS.
+### Install from a source checkout
 
-For this repository, prepare the sibling XR Blocks checkout with:
+To develop Devtools itself using its pinned XR Blocks dependency:
+
+```bash
+npm ci
+npm run link:cli
+npx playwright install chromium
+```
+
+`link:cli` builds the project and makes `xrblocks-devtools` available through
+npm's global link mechanism.
+
+To develop against a sibling XR Blocks source checkout instead, prepare and
+link that checkout before linking the CLI:
 
 ```bash
 npm run setup:local
+npm run link:cli
 ```
 
 The repository pins its development build to XR Blocks main commit
@@ -37,6 +59,33 @@ The repository pins its development build to XR Blocks main commit
 Blocks as an optional `^0.20.0` peer, so installing Devtools alone does not
 install the SDK. Devtools does not load an SDK from a CDN. Use
 `--xrblocks-root` or `npm run setup:local` when validating a different checkout.
+
+### Import from code
+
+Import `XRBlocksSession` from the package root:
+
+```ts
+import {XRBlocksSession} from '@xrblocks/devtools';
+
+const session = await XRBlocksSession.open({
+  appDir: './app',
+  headless: true,
+});
+
+try {
+  const camera = await session.getCamera();
+  await session.pointTo('right', {tag: 'start-button'});
+  await session.click('right');
+  const state = await session.getDevtoolsContext({state: true});
+  console.log({camera, state});
+} finally {
+  await session.close();
+}
+```
+
+Always close the session in `finally`. This releases Chromium, the local
+server, recordings, and temporary workspace files. See [Session API](#session-api)
+for configuration and targeting details.
 
 ## Documentation
 
@@ -274,6 +323,27 @@ object.userData.xrblocksDevtools = {
 `options.apiKey` or `GEMINI_API_KEY` and the optional `@google/genai` package.
 It is not an assertion or benchmark score.
 
+## Keep Your API Key Secure
+
+In specific AI use
+cases, this tool provides an interface to use cloud-hosted Gemini services, requiring an API key from
+[AI Studio](https://aistudio.google.com/app/apikey). Please follow
+[this doc](https://ai.google.dev/gemini-api/docs/api-key#security) for best
+practices to keep your API key secure.
+
+Treat your Gemini API key like a password. If compromised, others can use your
+project's quota, incur charges (if billing is enabled), and access your private
+data, such as files.
+
+### Critical Security Rules
+
+Never commit API keys to source control. Do not check your API key into version
+control systems like Git.
+
+Never expose API keys on the client-side. Do not use your API key directly in
+web or mobile apps in production. Keys in client-side code (including our
+JavaScript/TypeScript libraries and REST calls) can be extracted.
+
 ## Shipped skills
 
 - [`visualize-xrblocks`](skills/visualize-xrblocks/SKILL.md) runs an isolated
@@ -284,11 +354,11 @@ It is not an assertion or benchmark score.
 The npm package contains these skill folders. Agent hosts must expose or install
 them through their normal skill-discovery mechanism.
 
-## Source layout
+## Terms of Service
 
-- `src/session/` owns Session and hides Playwright, injection, workspace setup,
-  audio, and video.
-- `src/interactive.ts` adapts named Session functions to a promise-aware REPL.
-- `src/visualize/` owns isolated preview rendering.
-- `src/agent.ts` owns optional natural-language actions.
-- `docs/` owns human guides; `skills/` owns agent task processes.
+- Please follow
+  [Google's Privacy & Terms](https://policies.google.com/privacy?hl=en-US)
+  when using this SDK.
+
+- When using AI features in this SDK, please follow
+  [Gemini's Privacy & Terms](https://ai.google.dev/gemini-api/terms).

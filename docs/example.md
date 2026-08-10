@@ -128,7 +128,10 @@ This repository includes interactive examples:
 ```bash
 cd examples/object-interaction
 npm install
-npm run interact
+npx xrblocks-devtools interact \
+  --app-dir . \
+  --xrblocks-root ../../../xrblocks \
+  --headed
 ```
 
-The same commands work from `examples/ball-pit`.
+The same command works from `examples/ball-pit`.

@@ -35,8 +35,6 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "examples": "node scripts/serve-examples.mjs",
-    "example:visualize:ui": "npm run build && node dist/cli.js visualize ui examples/previews/ui-card.preview.ts --xrblocks-root ../xrblocks -o examples/previews/artifacts/ui-card.png",
-    "example:visualize:model": "npm run build && node dist/cli.js visualize model examples/previews/model-box.preview.ts -o examples/previews/artifacts/model-box.png",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

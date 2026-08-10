@@ -8,7 +8,10 @@ Run the example from this directory with:
 
 ```sh
 npm install
-npm run interact
+npx xrblocks-devtools interact \
+  --app-dir . \
+  --xrblocks-root ../../../xrblocks \
+  --headed
 ```
 
 In the Devtools REPL, one drag sequence is:
