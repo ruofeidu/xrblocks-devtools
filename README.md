@@ -38,6 +38,17 @@ Blocks as an optional `^0.20.0` peer, so installing Devtools alone does not
 install the SDK. Devtools does not load an SDK from a CDN. Use
 `--xrblocks-root` or `npm run setup:local` when validating a different checkout.
 
+## Documentation
+
+- [Usage examples](docs/example.md) provides complete CLI, Interact, Session,
+  and Agent examples.
+- [Visualize UI and Models](docs/visualize.md) defines preview modules, assets,
+  views, and render verification.
+- [Test Applications Interactively](docs/interactive.md) covers observation,
+  movement, input, audio, and recording.
+- [Use Scene Context with Embodied Actions](docs/scene-context.md) explains
+  targeting, developer metadata, and state verification.
+
 ## CLI
 
 Use `xrblocks-devtools help <command>` to read help generated from the same
