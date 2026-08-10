@@ -1,0 +1,12 @@
+{
+  "name": "@xrblocks/devtools-example-ball-pit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "interact": "xrblocks-devtools interact --app-dir . --xrblocks-root ../../../xrblocks --headed",
+    "agent": "xrblocks-devtools agent --app-dir . --xrblocks-root ../../../xrblocks --task \"Pinch to spawn bouncing balls in the open world\" --headed"
+  },
+  "devDependencies": {
+    "@xrblocks/devtools": "file:../.."
+  }
+}

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>XR Blocks: Bouncing Balls</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      body {
+        background: #08111b;
+      }
+
+      #hud {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 10;
+        display: flex;
+        max-width: min(420px, calc(100vw - 32px));
+        flex-direction: column;
+        gap: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(12, 16, 22, 0.78);
+        padding: 10px 12px;
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.35;
+        pointer-events: none;
+      }
+
+      #hud span {
+        color: rgba(255, 255, 255, 0.78);
+      }
+    </style>
+    <script>
+      window.litDisableBundleWarning = true;
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@dimforge/rapier3d-simd-compat": "./vendor/xrblocks/node_modules/@dimforge/rapier3d-simd-compat/rapier.es.js",
+          "@lit/reactive-element": "./vendor/xrblocks/node_modules/@lit/reactive-element/reactive-element.js",
+          "@lit/reactive-element/": "./vendor/xrblocks/node_modules/@lit/reactive-element/",
+          "lit": "./vendor/xrblocks/node_modules/lit/index.js",
+          "lit/": "./vendor/xrblocks/node_modules/lit/",
+          "lit-element": "./vendor/xrblocks/node_modules/lit-element/lit-element.js",
+          "lit-element/": "./vendor/xrblocks/node_modules/lit-element/",
+          "lit-html": "./vendor/xrblocks/node_modules/lit-html/lit-html.js",
+          "lit-html/": "./vendor/xrblocks/node_modules/lit-html/",
+          "three": "./vendor/three/build/three.module.js",
+          "three/addons/": "./vendor/three/examples/jsm/",
+          "xrblocks": "./vendor/xrblocks/build/xrblocks.js",
+          "xrblocks/addons/": "./vendor/xrblocks/build/addons/"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="hud">
+      <strong>Pinch or click to release a ball.</strong>
+      <span id="ball-count">0 balls in the world</span>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

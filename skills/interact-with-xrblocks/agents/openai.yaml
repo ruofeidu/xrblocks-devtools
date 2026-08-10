@@ -1,0 +1,4 @@
+interface:
+  display_name: "Interact with XR Blocks"
+  short_description: "Explore and verify complete XR Blocks apps"
+  default_prompt: "Use $interact-with-xrblocks to exercise this XR Blocks app and verify its behavior."

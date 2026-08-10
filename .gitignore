@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.xrblocks-devtools/
+artifacts/
+*.log
+.DS_Store
+.env
+generated/
+xr-test-artifacts/
+examples/**/artifacts/
+examples/**/node_modules/
+examples/**/vendor/
+examples/**/dist/

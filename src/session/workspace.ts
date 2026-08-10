@@ -1,0 +1,220 @@
+import os from 'node:os';
+import path from 'node:path';
+import {mkdtemp, readdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {
+  copyDir,
+  replaceWithSymlink,
+  requireDir,
+  requireFile,
+} from '../fs-utils.js';
+import {resolveSessionRuntimeAssets} from './runtime-assets.js';
+import type {RuntimeAssets} from './types.js';
+
+const XR_BLOCKS_VENDOR_ROOT = './vendor/xrblocks';
+const XR_BLOCKS_IMPORT = './vendor/xrblocks/build/xrblocks.js';
+const XR_BLOCKS_ADDONS_IMPORT = `${XR_BLOCKS_VENDOR_ROOT}/build/addons/`;
+
+export type MaterializedAppWorkspace = {
+  rootDir: string;
+  appDir: string;
+  cleanup: () => Promise<void>;
+};
+
+export async function materializeAppWorkspace(options: {
+  appDir: string;
+  xrblocksRoot?: string;
+}): Promise<MaterializedAppWorkspace> {
+  const sourceAppDir = path.resolve(options.appDir);
+  await requireDir(sourceAppDir, 'XR Blocks app directory');
+  await requireFile(
+    path.join(sourceAppDir, 'index.html'),
+    'XR Blocks app index.html'
+  );
+  const runtime = await resolveSessionRuntimeAssets({
+    appDir: sourceAppDir,
+    xrblocksRoot: options.xrblocksRoot,
+  });
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), 'xrblocks-devtools-'));
+
+  const materializedAppDir = path.join(rootDir, 'app');
+  try {
+    await copyDir(sourceAppDir, materializedAppDir);
+    await rewriteXrblocksVendorImports(
+      sourceAppDir,
+      materializedAppDir,
+      runtime
+    );
+    const vendorDir = path.join(materializedAppDir, 'vendor');
+    await replaceWithSymlink(
+      runtime.xrblocksRoot,
+      path.join(vendorDir, 'xrblocks')
+    );
+    await replaceWithSymlink(runtime.threeDir, path.join(vendorDir, 'three'));
+  } catch (error) {
+    await rm(rootDir, {recursive: true, force: true});
+    throw error;
+  }
+
+  return {
+    rootDir,
+    appDir: materializedAppDir,
+    cleanup: () => rm(rootDir, {recursive: true, force: true}),
+  };
+}
+
+async function rewriteXrblocksVendorImports(
+  sourceAppDir: string,
+  materializedAppDir: string,
+  runtime: RuntimeAssets
+) {
+  const htmlFiles = await findHtmlFiles(sourceAppDir);
+  for (const sourceHtmlPath of htmlFiles) {
+    const relativeHtmlPath = path.relative(sourceAppDir, sourceHtmlPath);
+    const materializedHtmlPath = path.join(
+      materializedAppDir,
+      relativeHtmlPath
+    );
+    const sourceHtml = await readFile(sourceHtmlPath, 'utf8');
+    const rewrittenHtml = rewriteXrblocksHtmlReferences(
+      sourceHtml,
+      path.dirname(sourceHtmlPath),
+      runtime
+    );
+    if (rewrittenHtml !== sourceHtml)
+      await writeFile(materializedHtmlPath, rewrittenHtml, 'utf8');
+  }
+}
+
+async function findHtmlFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, {withFileTypes: true});
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules') return [];
+        return findHtmlFiles(entryPath);
+      }
+      return entry.isFile() && entry.name.endsWith('.html') ? [entryPath] : [];
+    })
+  );
+  return files.flat();
+}
+
+function rewriteXrblocksHtmlReferences(
+  html: string,
+  sourceHtmlDir: string,
+  runtime: RuntimeAssets
+) {
+  const rewrittenImportMaps = rewriteXrblocksImportMapValues(html);
+  return rewrittenImportMaps.replace(
+    /(["'])([^"']+)(\1)/g,
+    (match, openQuote: string, importValue: string, closeQuote: string) => {
+      const vendorValue = xrblocksVendorReferenceValue(
+        importValue,
+        sourceHtmlDir,
+        runtime
+      );
+      return vendorValue ? `${openQuote}${vendorValue}${closeQuote}` : match;
+    }
+  );
+}
+
+function rewriteXrblocksImportMapValues(html: string) {
+  return html.replace(
+    /(<script\b[^>]*\btype=["']importmap["'][^>]*>)([\s\S]*?)(<\/script>)/gi,
+    (match, openTag: string, content: string, closeTag: string) => {
+      let importMap: unknown;
+      try {
+        importMap = JSON.parse(content);
+      } catch {
+        return match;
+      }
+
+      if (!isJsonObject(importMap) || !isJsonObject(importMap.imports))
+        return match;
+
+      let changed = false;
+      if (Object.hasOwn(importMap.imports, 'xrblocks')) {
+        importMap.imports.xrblocks = XR_BLOCKS_IMPORT;
+        changed = true;
+      }
+      if (Object.hasOwn(importMap.imports, 'xrblocks/addons/')) {
+        importMap.imports['xrblocks/addons/'] = XR_BLOCKS_ADDONS_IMPORT;
+        changed = true;
+      }
+
+      if (!changed) return match;
+      return `${openTag}\n${JSON.stringify(importMap, null, 2)}\n${closeTag}`;
+    }
+  );
+}
+
+function xrblocksVendorReferenceValue(
+  importValue: string,
+  sourceHtmlDir: string,
+  runtime: RuntimeAssets
+) {
+  const relativeXrblocksPath = xrblocksPackageRelativePath(
+    importValue,
+    sourceHtmlDir,
+    runtime.xrblocksRoot
+  );
+  if (relativeXrblocksPath === undefined) return undefined;
+
+  return relativeXrblocksPath
+    ? `${XR_BLOCKS_VENDOR_ROOT}/${relativeXrblocksPath}`
+    : `${XR_BLOCKS_VENDOR_ROOT}/`;
+}
+
+function xrblocksPackageRelativePath(
+  htmlValue: string,
+  sourceHtmlDir: string,
+  xrblocksRoot: string
+) {
+  if (!isRelativePathReference(htmlValue)) return undefined;
+
+  const resolvedImportPath = path.resolve(sourceHtmlDir, htmlValue);
+  const relativeXrblocksPath = path.relative(xrblocksRoot, resolvedImportPath);
+  if (
+    !relativeXrblocksPath.startsWith('..') &&
+    !path.isAbsolute(relativeXrblocksPath)
+  )
+    return normalizeRelativeUrlPath(relativeXrblocksPath, htmlValue);
+
+  return xrblocksPackageRelativePathFromSegment(htmlValue, xrblocksRoot);
+}
+
+function isRelativePathReference(value: string) {
+  return value.startsWith('./') || value.startsWith('../');
+}
+
+function xrblocksPackageRelativePathFromSegment(
+  htmlValue: string,
+  xrblocksRoot: string
+) {
+  const normalizedImportValue = htmlValue.split(path.sep).join('/');
+  const segments = normalizedImportValue.split('/').filter(Boolean);
+  const packageDirectoryName = path.basename(xrblocksRoot);
+  const xrblocksIndex = segments.lastIndexOf(packageDirectoryName);
+  if (xrblocksIndex === -1) return undefined;
+
+  return normalizeRelativeUrlPath(
+    segments.slice(xrblocksIndex + 1).join('/'),
+    htmlValue
+  );
+}
+
+function normalizeRelativeUrlPath(relativePath: string, originalValue: string) {
+  const normalizedPath = relativePath.split(path.sep).join('/');
+  if (
+    originalValue.endsWith('/') &&
+    normalizedPath &&
+    !normalizedPath.endsWith('/')
+  )
+    return `${normalizedPath}/`;
+  return normalizedPath;
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
