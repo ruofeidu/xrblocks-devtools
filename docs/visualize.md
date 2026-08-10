@@ -30,6 +30,10 @@ UICards are staged front-facing and fitted to 90% of the image. UIOverlays use
 their normal screen-space layout. UI text and validation use the selected
 public XR Blocks runtime without content rewriting or private UIKit imports.
 
+Model previews default to `inspection-4`: front-left, front-right, rear-left,
+and rear-right views at 45° elevation. Use `--views turntable-4` for four level
+cardinal views or `--views front` for one image.
+
 ## Input and assets
 
 Use a module file for relative imports. Use stdin for a self-contained preview:
