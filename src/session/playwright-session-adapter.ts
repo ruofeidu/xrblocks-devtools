@@ -202,8 +202,6 @@ declare global {
     xbReady?: Promise<void>;
     __xrblocksDevtoolsRuntime?: Record<string, unknown>;
     __xrblocksDevtoolsEmbodiedControl?: Record<string, unknown>;
-    __xrblocksDevtoolsEmbodiedControlClass?: new () => unknown;
-    __xrblocksDevtoolsEmbodiedControlModule?: Record<string, unknown>;
     __xrblocksSyntheticAudio?: {
       available: boolean;
       inject(input: JsonObject): Promise<unknown>;

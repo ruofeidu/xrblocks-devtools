@@ -21,9 +21,8 @@ export function previewHtml(options: {
       {
         "imports": {
           "three": "./runtime/three/build/three.module.js",
-          "three/addons/": "./runtime/three/examples/jsm/",
-          "three/examples/jsm/": "./runtime/three/examples/jsm/",
-          "three/src/": "./runtime/three/src/"
+          "three/": "./runtime/three/",
+          "three/addons/": "./runtime/three/examples/jsm/"
         }
       }
     </script>

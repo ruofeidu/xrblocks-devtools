@@ -41,6 +41,16 @@ describe('materializeAppWorkspace', () => {
       path.join(xrblocksRoot, 'node_modules', 'three', 'examples', 'jsm'),
       {recursive: true}
     );
+    const peerFiles = [
+      ['@pmndrs', 'uikit', 'dist', 'index.js'],
+      ['@preact', 'signals-core', 'dist', 'signals-core.mjs'],
+      ['lit', 'index.js'],
+    ];
+    for (const segments of peerFiles) {
+      const filePath = path.join(xrblocksRoot, 'node_modules', ...segments);
+      await mkdir(path.dirname(filePath), {recursive: true});
+      await writeFile(filePath, 'export {};\n');
+    }
     await mkdir(appDir, {recursive: true});
     await writeFile(
       path.join(xrblocksRoot, 'build', 'xrblocks.js'),
@@ -76,11 +86,15 @@ describe('materializeAppWorkspace', () => {
     expect(html).toContain(
       '"xrblocks/addons/": "./vendor/xrblocks/build/addons/"'
     );
+    expect(html).toContain('"lit": "./vendor/node_modules/lit/index.js"');
     await expect(
       readlink(path.join(workspace.appDir, 'vendor', 'xrblocks'))
     ).resolves.toBe(xrblocksRoot);
     await expect(
       readlink(path.join(workspace.appDir, 'vendor', 'three'))
     ).resolves.toBe(path.join(xrblocksRoot, 'node_modules', 'three'));
+    await expect(
+      readlink(path.join(workspace.appDir, 'vendor', 'node_modules'))
+    ).resolves.toBe(path.join(xrblocksRoot, 'node_modules'));
   });
 });

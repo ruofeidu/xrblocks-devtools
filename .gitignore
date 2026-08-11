@@ -5,6 +5,8 @@ artifacts/
 *.log
 .DS_Store
 .env
+.env.local
+
 generated/
 xr-test-artifacts/
 examples/**/artifacts/

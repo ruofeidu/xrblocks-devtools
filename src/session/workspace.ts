@@ -13,6 +13,21 @@ import type {RuntimeAssets} from './types.js';
 const XR_BLOCKS_VENDOR_ROOT = './vendor/xrblocks';
 const XR_BLOCKS_IMPORT = './vendor/xrblocks/build/xrblocks.js';
 const XR_BLOCKS_ADDONS_IMPORT = `${XR_BLOCKS_VENDOR_ROOT}/build/addons/`;
+const NODE_MODULES_VENDOR_ROOT = './vendor/node_modules';
+const XR_BLOCKS_IMPORTS = {
+  three: './vendor/three/build/three.module.js',
+  'three/': './vendor/three/',
+  'three/addons/': './vendor/three/examples/jsm/',
+  '@pmndrs/uikit': `${NODE_MODULES_VENDOR_ROOT}/@pmndrs/uikit/dist/index.js`,
+  '@pmndrs/uikit-pub-sub': `${NODE_MODULES_VENDOR_ROOT}/@pmndrs/uikit-pub-sub/dist/index.js`,
+  '@pmndrs/msdfonts': `${NODE_MODULES_VENDOR_ROOT}/@pmndrs/msdfonts/dist/index.js`,
+  '@preact/signals-core': `${NODE_MODULES_VENDOR_ROOT}/@preact/signals-core/dist/signals-core.mjs`,
+  'yoga-layout/load': `${NODE_MODULES_VENDOR_ROOT}/yoga-layout/dist/src/load.js`,
+  lit: `${NODE_MODULES_VENDOR_ROOT}/lit/index.js`,
+  'lit/': `${NODE_MODULES_VENDOR_ROOT}/lit/`,
+  xrblocks: XR_BLOCKS_IMPORT,
+  'xrblocks/addons/': XR_BLOCKS_ADDONS_IMPORT,
+} satisfies Record<string, string>;
 const THREE_PATHFINDING_IMPORT =
   './vendor/three-pathfinding/dist/three-pathfinding.module.js';
 
@@ -54,6 +69,10 @@ export async function materializeAppWorkspace(options: {
       path.join(vendorDir, 'xrblocks')
     );
     await replaceWithSymlink(runtime.threeDir, path.join(vendorDir, 'three'));
+    await replaceWithSymlink(
+      runtime.nodeModulesDir,
+      path.join(vendorDir, 'node_modules')
+    );
     if (runtime.threePathfindingDir) {
       await replaceWithSymlink(
         runtime.threePathfindingDir,
@@ -143,21 +162,11 @@ function rewriteXrblocksImportMapValues(html: string, runtime: RuntimeAssets) {
       if (!isJsonObject(importMap) || !isJsonObject(importMap.imports))
         return match;
 
-      let changed = false;
-      if (Object.hasOwn(importMap.imports, 'xrblocks')) {
-        importMap.imports.xrblocks = XR_BLOCKS_IMPORT;
-        changed = true;
-      }
-      if (Object.hasOwn(importMap.imports, 'xrblocks/addons/')) {
-        importMap.imports['xrblocks/addons/'] = XR_BLOCKS_ADDONS_IMPORT;
-        changed = true;
-      }
+      Object.assign(importMap.imports, XR_BLOCKS_IMPORTS);
       if (runtime.threePathfindingDir) {
         importMap.imports['three-pathfinding'] = THREE_PATHFINDING_IMPORT;
-        changed = true;
       }
 
-      if (!changed) return match;
       return `${openTag}\n${JSON.stringify(importMap, null, 2)}\n${closeTag}`;
     }
   );
@@ -195,27 +204,11 @@ function xrblocksPackageRelativePath(
   )
     return normalizeRelativeUrlPath(relativeXrblocksPath, htmlValue);
 
-  return xrblocksPackageRelativePathFromSegment(htmlValue, xrblocksRoot);
+  return undefined;
 }
 
 function isRelativePathReference(value: string) {
   return value.startsWith('./') || value.startsWith('../');
-}
-
-function xrblocksPackageRelativePathFromSegment(
-  htmlValue: string,
-  xrblocksRoot: string
-) {
-  const normalizedImportValue = htmlValue.split(path.sep).join('/');
-  const segments = normalizedImportValue.split('/').filter(Boolean);
-  const packageDirectoryName = path.basename(xrblocksRoot);
-  const xrblocksIndex = segments.lastIndexOf(packageDirectoryName);
-  if (xrblocksIndex === -1) return undefined;
-
-  return normalizeRelativeUrlPath(
-    segments.slice(xrblocksIndex + 1).join('/'),
-    htmlValue
-  );
 }
 
 function normalizeRelativeUrlPath(relativePath: string, originalValue: string) {

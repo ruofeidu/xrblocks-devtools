@@ -22,8 +22,12 @@ npx xrblocks-devtools help
 
 The package exposes the `xrblocks-devtools` CLI.
 
-Install XR Blocks and Three.js in the application, or pass `--xrblocks-root`
-when working against a source checkout.
+Install the XR Blocks v0.20 runtime peers in the application, or pass
+`--xrblocks-root` when working against a source checkout:
+
+```bash
+npm install xrblocks three @pmndrs/uikit @preact/signals-core lit
+```
 
 The following are optional dependencies that add additional functionality to XR Blocks Devtools.
 
@@ -75,12 +79,6 @@ link that checkout before linking the CLI:
 npm run setup:local
 npm run link:cli
 ```
-
-The repository pins its development build to XR Blocks main commit
-`3eb2b2fc509f57628ad3b3f9c10cada8ccead413`. Published Devtools keeps XR
-Blocks as an optional `^0.20.0` peer, so installing Devtools alone does not
-install the SDK. Devtools does not load an SDK from a CDN. Use
-`--xrblocks-root` or `npm run setup:local` when validating a different checkout.
 
 ### Import from code
 

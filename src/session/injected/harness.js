@@ -14,13 +14,10 @@ async function init({
     await window.__xrblocksDevtoolsEmbodiedControl.ready;
     return {initialized: true, simulator, deviceCamera};
   }
-  let EmbodiedControl =
-    window.__xrblocksDevtoolsEmbodiedControlClass ||
-    window.__xrblocksDevtoolsEmbodiedControlModule?.EmbodiedControl ||
-    window.__xrblocksDevtoolsEmbodiedControlModule?.default;
-  if (!EmbodiedControl && embodiedControlImport) {
+  let EmbodiedControl;
+  if (embodiedControlImport) {
     const module = await import(embodiedControlImport);
-    EmbodiedControl = module.EmbodiedControl || module.default;
+    EmbodiedControl = module.EmbodiedControl;
     if (!EmbodiedControl) {
       throw new Error(
         'EmbodiedControl export was not found in ' + embodiedControlImport

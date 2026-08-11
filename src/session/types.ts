@@ -94,6 +94,7 @@ export type SceneContextOptions = {
 export type RuntimeAssets = {
   xrblocksRoot: string;
   xrblocksBuildDir: string;
+  nodeModulesDir: string;
   threeDir: string;
   threePathfindingDir?: string;
 };

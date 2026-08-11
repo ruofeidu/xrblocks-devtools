@@ -87,18 +87,33 @@ export async function visualize(
     browser = await chromium.launch({headless: true, args: ['--enable-gpu']});
     options.signal?.throwIfAborted();
     page = await browser.newPage({viewport: size});
+    const browserErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => browserErrors.push(error.message));
+    page.on('requestfailed', (request) => {
+      browserErrors.push(
+        `${request.method()} ${request.url()}: ${request.failure()?.errorText ?? 'failed'}`
+      );
+    });
     options.signal?.throwIfAborted();
     await page.goto(server.url, {waitUntil: 'domcontentloaded'});
     options.signal?.throwIfAborted();
-    await page.waitForFunction(
-      () => {
-        const visualizer = window.__xrblocksVisualizer;
-        if (visualizer?.error) throw new Error(visualizer.error);
-        return Boolean(visualizer?.ready);
-      },
-      undefined,
-      {timeout: options.kind === 'ui' ? 120_000 : 30_000}
-    );
+    try {
+      await page.waitForFunction(
+        () => {
+          const visualizer = window.__xrblocksVisualizer;
+          if (visualizer?.error) throw new Error(visualizer.error);
+          return Boolean(visualizer?.ready);
+        },
+        undefined,
+        {timeout: options.kind === 'ui' ? 120_000 : 30_000}
+      );
+    } catch (error) {
+      if (browserErrors.length === 0) throw error;
+      throw new Error(browserErrors.join('\n'), {cause: error});
+    }
     options.signal?.throwIfAborted();
     const warnings = await page.evaluate(
       () => window.__xrblocksVisualizer?.warnings ?? []

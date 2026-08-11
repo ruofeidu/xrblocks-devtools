@@ -23,10 +23,6 @@ type InjectedWindow = {
     navigateTo(target: [number, number, number]): Promise<unknown>;
     init(options?: object): Promise<unknown>;
   };
-  __xrblocksDevtoolsEmbodiedControlClass?: new () => {
-    ready: Promise<void>;
-    init(dependencies: object): void;
-  };
 };
 
 async function installHarness(window: InjectedWindow) {
@@ -164,25 +160,5 @@ describe('injected Devtools runtime', () => {
 
     expect(simulator.options).toEqual({navMesh: {enabled: true}});
     expect(setEnvironment).toHaveBeenCalledWith('/room.json');
-  });
-
-  it('initializes EmbodiedControl with core and camera only', async () => {
-    const scene = new THREE.Scene();
-    const window = testWindow(scene);
-    let dependencies: object | undefined;
-    class EmbodiedControl {
-      ready = Promise.resolve();
-      init(value: object) {
-        dependencies = value;
-      }
-    }
-    window.__xrblocksDevtoolsEmbodiedControlClass = EmbodiedControl;
-    const runtime = await installHarness(window);
-
-    await runtime.init();
-    expect(dependencies).toEqual({
-      core: window.xb!.core,
-      camera: (window.xb!.core as {camera: unknown}).camera,
-    });
   });
 });
