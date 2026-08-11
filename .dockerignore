@@ -1,0 +1,15 @@
+.git
+node_modules
+dist
+
+.env
+.env.*
+*.log
+.DS_Store
+
+.xrblocks-devtools
+artifacts
+generated
+xr-test-artifacts
+
+examples
