@@ -59,7 +59,7 @@ ffmpeg -version
 Without FFmpeg, recording still works, but Devtools preserves the complete raw
 WebM instead of producing a trimmed MP4.
 
-### Install from a source
+### Install from source
 
 To develop Devtools itself using its pinned XR Blocks dependency:
 
