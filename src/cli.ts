@@ -9,6 +9,7 @@ import {commandHelp, parseCommand} from './command-config.js';
 import {loadProjectEnv} from './env.js';
 import {runInteractive, interactiveHelpText} from './interactive.js';
 import {installInterruptHandlers} from './signals.js';
+import {runTests} from './test/run-tests.js';
 import {visualize} from './visualize/index.js';
 
 export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
@@ -52,6 +53,20 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       });
       await runInteractive(command.session);
       return 0;
+    case 'test': {
+      const result = await runTests({
+        tests: command.tests,
+        app: {
+          appDir: command.appDir,
+          xrblocksRoot: command.xrblocksRoot,
+          entry: command.entry,
+        },
+        outputDir: command.outputDir,
+        sessionTimeoutMs: command.sessionTimeoutMs,
+      });
+      console.log(JSON.stringify(result, null, 2));
+      return result.status === 'valid' ? 0 : 1;
+    }
     case 'agent': {
       loadProjectEnv({
         appDir: command.session.appDir,

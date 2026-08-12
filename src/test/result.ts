@@ -1,0 +1,77 @@
+import {randomUUID} from 'node:crypto';
+import {mkdir, rename, rm, writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import type {BrowserDiagnostics, PhysicalHand} from '../session/index.js';
+
+export type TestStatus = 'passed' | 'failed' | 'blocked';
+
+export interface TestRunResult {
+  id: string;
+  status: TestStatus;
+  pointsAvailable: number;
+  pointsEarned: number;
+  durationMs: number;
+  primaryHand?: PhysicalHand;
+  secondaryHand?: PhysicalHand;
+  scenario?: string;
+  realTime?: boolean;
+  video?: string;
+  videoTimeline?: string;
+  message?: string;
+  diagnostics?: BrowserDiagnostics;
+}
+
+export interface TestResult {
+  id: string;
+  name: string;
+  kind: 'test' | 'session';
+  required: boolean;
+  pointsAvailable: number;
+  pointsEarned: number;
+  status: TestStatus;
+  runs: TestRunResult[];
+}
+
+export interface EvaluationError {
+  kind: 'candidate' | 'verifier';
+  phase: 'preflight' | 'collection' | 'session' | 'test' | 'cleanup';
+  message: string;
+  stack?: string;
+}
+
+export interface EvaluationResult {
+  schemaVersion: 1;
+  status: 'valid' | 'invalid';
+  runnable: boolean;
+  score: number | null;
+  earnedPoints: number;
+  requiredGateFailed: boolean;
+  tests: TestResult[];
+  errors: EvaluationError[];
+  provenance: {
+    testRunnerVersion: string;
+    app: Record<string, string>;
+  };
+  startedAt: string;
+  finishedAt: string;
+}
+
+export async function writeResult(
+  outputDir: string,
+  result: EvaluationResult
+): Promise<void> {
+  const absoluteOutput = path.resolve(outputDir);
+  await mkdir(absoluteOutput, {recursive: true});
+  const destination = path.join(absoluteOutput, 'result.json');
+  const temporary = path.join(
+    absoluteOutput,
+    `.result.${process.pid}.${randomUUID()}.tmp`
+  );
+
+  try {
+    await writeFile(temporary, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+    await rename(temporary, destination);
+  } finally {
+    await rm(temporary, {force: true}).catch(() => undefined);
+  }
+}

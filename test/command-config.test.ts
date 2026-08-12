@@ -9,6 +9,7 @@ describe('command configuration interface', () => {
       'agent',
       ['agent', '--url', 'http://example.test', '--task', 'inspect', '--wat'],
     ],
+    ['test', ['test', 'evaluation.ts', '--app', './app', '--wat']],
   ])('rejects unknown %s flags', (_command, argv) => {
     expect(() => parseCommand(argv)).toThrow('Unknown');
   });
@@ -75,6 +76,30 @@ describe('command configuration interface', () => {
 
   it('generates help from the same definitions used for parsing', () => {
     expect(commandHelp('agent')).toContain('--task <text>');
+    expect(commandHelp('test')).toContain('test <file> --app <dir>');
+  });
+
+  it('parses the XR Blocks test command', () => {
+    expect(
+      parseCommand([
+        'test',
+        'tests/evaluation.ts',
+        '--app',
+        './app',
+        '--xrblocks-root',
+        '../xrblocks',
+        '--output',
+        './results',
+      ])
+    ).toEqual({
+      kind: 'test',
+      tests: 'tests/evaluation.ts',
+      appDir: './app',
+      xrblocksRoot: '../xrblocks',
+      entry: undefined,
+      outputDir: './results',
+      sessionTimeoutMs: undefined,
+    });
   });
 
   it('keeps UI and model preview options separate', () => {

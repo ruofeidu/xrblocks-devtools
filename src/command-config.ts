@@ -19,7 +19,7 @@ type CommandDefinition = {
   flags: readonly FlagDefinition[];
 };
 
-type CommandName = 'visualize' | 'interact' | 'agent';
+type CommandName = 'visualize' | 'interact' | 'agent' | 'test';
 
 type FlagValues = Record<string, string | number | boolean>;
 
@@ -47,6 +47,15 @@ export type ParsedCommand =
       envFile?: string;
       context: AgentObservationKind[];
       quiet: boolean;
+    }
+  | {
+      kind: 'test';
+      tests: string;
+      appDir: string;
+      xrblocksRoot?: string;
+      entry?: string;
+      outputDir: string;
+      sessionTimeoutMs?: number;
     };
 
 const sessionFlags = [
@@ -154,6 +163,23 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag('quiet', 'boolean', 'Suppress progress events'),
     ],
   },
+  test: {
+    name: 'test',
+    usage: 'test <file> --app <dir> [options]',
+    summary: 'Run scored XR Blocks tests.',
+    flags: [
+      flag('app', 'string', 'Use this XR Blocks App directory', 'dir'),
+      flag(
+        'xrblocks-root',
+        'string',
+        'Use an XR Blocks checkout/package root',
+        'dir'
+      ),
+      flag('entry', 'string', 'Select an app page path', 'path'),
+      flag('output', 'string', 'Write result.json and artifacts here', 'dir'),
+      flag('timeout-ms', 'number', 'Set the browser startup timeout', 'ms'),
+    ],
+  },
 };
 
 export function parseCommand(
@@ -205,6 +231,24 @@ export function parseCommand(
       views: viewPreset(parsed.flags),
       assetsDir: stringValue(parsed.flags, 'assets-dir'),
       xrblocksRoot: stringValue(parsed.flags, 'xrblocks-root'),
+    };
+  }
+
+  if (name === 'test') {
+    const [tests, ...extra] = parsed.positionals;
+    if (!tests) throw new Error('Test requires a test file.');
+    if (extra.length > 0) throw new Error(`Unexpected argument: ${extra[0]}`);
+    const appDir = stringValue(parsed.flags, 'app');
+    if (!appDir) throw new Error('Test requires --app.');
+    return {
+      kind: 'test',
+      tests,
+      appDir,
+      xrblocksRoot: stringValue(parsed.flags, 'xrblocks-root'),
+      entry: stringValue(parsed.flags, 'entry'),
+      outputDir:
+        stringValue(parsed.flags, 'output') ?? 'artifacts/xrblocks-test',
+      sessionTimeoutMs: numberValue(parsed.flags, 'timeout-ms'),
     };
   }
 

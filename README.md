@@ -219,6 +219,46 @@ an error. Existing shell variables take priority over file values, and
 `--api-key` takes priority over `GEMINI_API_KEY`. Only `agent` requires the key
 before opening Chromium; `interact` can start without it.
 
+### Test
+
+Write ordinary and session tests with the package test export:
+
+```ts
+import {expect, it, it_session} from '@xrblocks/devtools/test';
+
+it('publishes a texture', {points: 40}, () => {
+  expect(createTexture()).toBeDefined();
+});
+
+it_session(
+  'selects with either hand',
+  {points: 60, switchHands: 'split-points', video: 'selection'},
+  async (session, {primaryHand}) => {
+    await session.click(primaryHand);
+  }
+);
+```
+
+Run one test file against one prepared application:
+
+```text
+xrblocks-devtools test tests/evaluation.ts --app ./app [options]
+```
+
+| Flag                    | Value and behavior                                        |
+| ----------------------- | --------------------------------------------------------- |
+| `--app <dir>`           | Required browser-runnable application directory.          |
+| `--xrblocks-root <dir>` | XR Blocks package or checkout used by the application.    |
+| `--entry <path>`        | HTML page inside the application. Default `index.html`.   |
+| `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`. |
+| `--timeout-ms <ms>`     | Browser startup timeout for session tests.                |
+| `-h`, `--help`          | Show command help.                                        |
+
+Tests without points are required. If tests use points, their logical point
+total must be `100`. Session tests receive the complete `XRBlocksSession`.
+`realTime` defaults to `false`. A session test records video only when its
+options include a simple `video` name.
+
 ## Interactive function reference
 
 Targets are an exact unique scene/context name, a world position `[x, y, z]` in
