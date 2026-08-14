@@ -8,8 +8,6 @@ export type TestStatus = 'passed' | 'failed' | 'blocked';
 export interface TestRunResult {
   id: string;
   status: TestStatus;
-  pointsAvailable: number;
-  pointsEarned: number;
   durationMs: number;
   primaryHand?: PhysicalHand;
   secondaryHand?: PhysicalHand;
@@ -26,8 +24,6 @@ export interface TestResult {
   name: string;
   kind: 'test' | 'session';
   required: boolean;
-  pointsAvailable: number;
-  pointsEarned: number;
   status: TestStatus;
   runs: TestRunResult[];
 }
@@ -40,11 +36,12 @@ export interface EvaluationError {
 }
 
 export interface EvaluationResult {
-  schemaVersion: 1;
+  schemaVersion: 2;
   status: 'valid' | 'invalid';
   runnable: boolean;
   score: number | null;
-  earnedPoints: number;
+  passedTests: number;
+  totalTests: number;
   requiredGateFailed: boolean;
   tests: TestResult[];
   errors: EvaluationError[];

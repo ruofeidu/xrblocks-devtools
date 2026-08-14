@@ -226,13 +226,13 @@ Write ordinary and session tests with the package test export:
 ```ts
 import {expect, it, it_session} from '@xrblocks/devtools/test';
 
-it('publishes a texture', {points: 40}, () => {
+it('publishes a texture', () => {
   expect(createTexture()).toBeDefined();
 });
 
 it_session(
   'selects with either hand',
-  {points: 60, switchHands: 'split-points', video: 'selection'},
+  {switchHands: true, video: 'selection'},
   async (session, {primaryHand}) => {
     await session.click(primaryHand);
   }
@@ -254,10 +254,11 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--timeout-ms <ms>`     | Browser startup timeout for session tests.                |
 | `-h`, `--help`          | Show command help.                                        |
 
-Tests without points are required. If tests use points, their logical point
-total must be `100`. Session tests receive the complete `XRBlocksSession`.
-`realTime` defaults to `false`. A session test records video only when its
-options include a simple `video` name.
+Each test run contributes equally to the score. Hand and scenario variants count
+as separate test runs. Set `required: true` to make any failed variant set the
+score to `0`. Session tests receive the complete `XRBlocksSession`. `realTime`
+defaults to `false`. A session test records video only when its options include a
+simple `video` name.
 
 ## Interactive function reference
 

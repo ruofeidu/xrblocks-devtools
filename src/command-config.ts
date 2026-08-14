@@ -166,7 +166,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
   test: {
     name: 'test',
     usage: 'test <file> --app <dir> [options]',
-    summary: 'Run scored XR Blocks tests.',
+    summary: 'Run XR Blocks tests.',
     flags: [
       flag('app', 'string', 'Use this XR Blocks App directory', 'dir'),
       flag(

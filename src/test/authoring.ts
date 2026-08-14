@@ -24,13 +24,12 @@ type VitestOptions = Omit<
   'concurrent' | 'fails' | 'meta' | 'repeats' | 'retry' | 'sequential'
 >;
 
-export interface ScoredTestOptions extends VitestOptions {
-  points?: number;
+export interface XRBlocksTestOptions extends VitestOptions {
   required?: boolean;
 }
 
-export interface SessionTestOptions extends ScoredTestOptions {
-  switchHands?: 'required' | 'split-points';
+export interface SessionTestOptions extends XRBlocksTestOptions {
+  switchHands?: boolean;
   scenarios?: string[];
   video?: string;
   realTime?: boolean;
@@ -48,15 +47,15 @@ export type SessionTestFunction = (
   context: TestContext
 ) => void | Promise<void>;
 
-interface ScoredItCall {
+interface XRBlocksItCall {
   (name: string, callback: TestFunction, timeout?: number): void;
-  (name: string, options: ScoredTestOptions, callback: TestFunction): void;
+  (name: string, options: XRBlocksTestOptions, callback: TestFunction): void;
 }
 
-export interface ScoredIt extends ScoredItCall {
-  only: ScoredItCall;
-  skip: ScoredItCall;
-  todo(name: string, options?: ScoredTestOptions): void;
+export interface XRBlocksIt extends XRBlocksItCall {
+  only: XRBlocksItCall;
+  skip: XRBlocksItCall;
+  todo(name: string, options?: XRBlocksTestOptions): void;
 }
 
 type VitestItCall = (
@@ -67,10 +66,10 @@ type VitestItCall = (
 
 let nextLogicalId = 0;
 
-export const it: ScoredIt = Object.assign(makeIt(vitestIt), {
+export const it: XRBlocksIt = Object.assign(makeIt(vitestIt), {
   only: makeIt(vitestIt.only),
   skip: makeIt(vitestIt.skip),
-  todo: (name: string, options: ScoredTestOptions = {}) => {
+  todo: (name: string, options: XRBlocksTestOptions = {}) => {
     registerPlainTest(vitestIt.todo, name, options);
   },
 });
@@ -109,9 +108,7 @@ export function it_session(
       name,
       kind: 'session',
       required: plan.required,
-      logicalPoints: plan.logicalPoints,
       runId: run.id,
-      runPoints: run.points,
       primaryHand: run.primaryHand,
       secondaryHand: run.secondaryHand,
       scenario: run.scenario,
@@ -135,10 +132,10 @@ export function it_session(
   }
 }
 
-function makeIt(base: VitestItCall): ScoredItCall {
+function makeIt(base: VitestItCall): XRBlocksItCall {
   return (
     name: string,
-    optionsOrCallback: ScoredTestOptions | TestFunction,
+    optionsOrCallback: XRBlocksTestOptions | TestFunction,
     callbackOrTimeout?: TestFunction | number
   ): void => {
     if (typeof optionsOrCallback === 'function') {
@@ -156,26 +153,22 @@ function makeIt(base: VitestItCall): ScoredItCall {
 function registerPlainTest(
   base: VitestItCall,
   name: string,
-  options: ScoredTestOptions,
+  options: XRBlocksTestOptions,
   callback?: TestFunction
 ): void {
-  const points = validateOptionalPoints(options.points, `Test ${name}`) ?? 0;
   const meta: XRBlocksTestMeta = {
     schemaVersion: 1,
     logicalId: logicalId(),
     name,
     kind: 'test',
-    required: points === 0 ? true : (options.required ?? false),
-    logicalPoints: points,
+    required: options.required ?? false,
     runId: 'default',
-    runPoints: points,
   };
   base(name, testOptions(options, meta), callback);
 }
 
 interface PlannedSessionRun extends SessionTestRun {
   id: string;
-  points: number;
   videoSuffix: string;
 }
 
@@ -184,30 +177,22 @@ function planSessionRuns(
   options: SessionTestOptions
 ): {
   logicalId: string;
-  logicalPoints: number;
   required: boolean;
   runs: PlannedSessionRun[];
 } {
   const switchHands = options.switchHands;
-  const logicalPoints =
-    validateOptionalPoints(options.points, `Session test ${name}`) ?? 0;
-  if (switchHands === 'split-points' && logicalPoints === 0)
-    throw new TypeError(
-      `Session test ${name} needs points when switchHands is "split-points".`
-    );
+  if (switchHands !== undefined && typeof switchHands !== 'boolean')
+    throw new TypeError(`Session test ${name} switchHands must be a Boolean.`);
   const hands: PhysicalHand[] = switchHands ? ['right', 'left'] : ['right'];
 
   const scenarios = normalizeScenarios(name, options.scenarios);
   validateVideoName(name, options.video);
   if (options.realTime !== undefined && typeof options.realTime !== 'boolean')
     throw new TypeError(`Session test ${name} realTime must be a Boolean.`);
-  const required =
-    switchHands === 'required' ||
-    (logicalPoints === 0 ? true : (options.required ?? false));
+  const required = options.required ?? false;
   const runs: PlannedSessionRun[] = [];
 
   for (const primaryHand of hands) {
-    const handPoints = logicalPoints / hands.length;
     for (const [scenarioIndex, scenario] of scenarios.entries()) {
       const suffixes = [];
       if (hands.length > 1) suffixes.push(primaryHand);
@@ -217,13 +202,12 @@ function planSessionRuns(
         primaryHand,
         secondaryHand: primaryHand === 'right' ? 'left' : 'right',
         scenario,
-        points: handPoints / scenarios.length,
         videoSuffix: suffixes.length > 0 ? `-${suffixes.join('-')}` : '',
       });
     }
   }
 
-  return {logicalId: logicalId(), logicalPoints, required, runs};
+  return {logicalId: logicalId(), required, runs};
 }
 
 function normalizeScenarios(
@@ -340,10 +324,10 @@ async function runSessionTest(
 }
 
 function testOptions(
-  options: ScoredTestOptions,
+  options: XRBlocksTestOptions,
   meta: XRBlocksTestMeta
 ): TestOptions {
-  const {points: _points, required: _required, ...vitestOptions} = options;
+  const {required: _required, ...vitestOptions} = options;
   return {
     ...vitestOptions,
     concurrent: false,
@@ -351,20 +335,6 @@ function testOptions(
     retry: 0,
     meta: {xrblocksTest: meta},
   };
-}
-
-function validateOptionalPoints(
-  value: number | undefined,
-  label: string
-): number | undefined {
-  if (value === undefined) return undefined;
-  validatePoints(value, label);
-  return value;
-}
-
-function validatePoints(value: number, label: string): void {
-  if (!Number.isFinite(value) || value <= 0)
-    throw new TypeError(`${label} points must be positive and finite.`);
 }
 
 const VIDEO_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;

@@ -6,9 +6,7 @@ export interface XRBlocksTestMeta {
   name: string;
   kind: 'test' | 'session';
   required: boolean;
-  logicalPoints: number;
   runId: string;
-  runPoints: number;
   primaryHand?: PhysicalHand;
   secondaryHand?: PhysicalHand;
   scenario?: string;

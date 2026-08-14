@@ -3,8 +3,7 @@ import {expect, it_session} from '@xrblocks/devtools/test';
 it_session(
   'opens the app for each primary hand',
   {
-    points: 100,
-    switchHands: 'split-points',
+    switchHands: true,
     video: 'hand-session',
     realTime: true,
   },

@@ -17,7 +17,6 @@ import {
 } from './result.js';
 
 const TEST_RUNNER_VERSION = '0.1.0';
-const SCORE_TOLERANCE = 1e-9;
 
 export interface AppBinding {
   appDir: string;
@@ -150,8 +149,6 @@ function collectRun(
           name: meta.name,
           kind: meta.kind,
           required: meta.required,
-          pointsAvailable: meta.logicalPoints,
-          pointsEarned: 0,
           status: 'passed',
           runs: [],
         };
@@ -167,27 +164,18 @@ function collectRun(
 
       const run = collectTestRun(test, meta, result);
       logical.runs.push(run);
-      logical.pointsEarned += run.pointsEarned;
     }
   }
 
   result.tests = [...groups.values()];
   for (const test of result.tests) {
-    const allocated = test.runs.reduce(
-      (total, run) => total + run.pointsAvailable,
-      0
-    );
-    if (
-      Math.abs(allocated - test.pointsAvailable) > SCORE_TOLERANCE ||
-      new Set(test.runs.map((run) => run.id)).size !== test.runs.length
-    ) {
+    if (new Set(test.runs.map((run) => run.id)).size !== test.runs.length) {
       invalidate(result, {
         kind: 'verifier',
         phase: 'collection',
         message: `Expanded test ${test.name} has invalid run allocation.`,
       });
     }
-    test.pointsEarned = round(test.pointsEarned);
     test.status = combineStatuses(test.runs.map((run) => run.status));
   }
 
@@ -229,8 +217,6 @@ function collectTestRun(
   return {
     id: meta.runId,
     status,
-    pointsAvailable: meta.runPoints,
-    pointsEarned: status === 'passed' ? meta.runPoints : 0,
     durationMs: test.diagnostic()?.duration ?? 0,
     primaryHand: meta.primaryHand,
     secondaryHand: meta.secondaryHand,
@@ -244,33 +230,16 @@ function collectTestRun(
 }
 
 function applyScore(result: EvaluationResult): void {
-  const totalPoints = result.tests.reduce(
-    (total, test) => total + test.pointsAvailable,
-    0
-  );
-  if (totalPoints > 0 && Math.abs(totalPoints - 100) > SCORE_TOLERANCE) {
-    invalidate(result, {
-      kind: 'verifier',
-      phase: 'collection',
-      message: `Scored tests must total 100 points; received ${totalPoints}.`,
-    });
-    return;
-  }
-
-  result.earnedPoints = round(
-    result.tests.reduce((total, test) => total + test.pointsEarned, 0)
-  );
+  const runs = result.tests.flatMap((test) => test.runs);
+  result.totalTests = runs.length;
+  result.passedTests = runs.filter((run) => run.status === 'passed').length;
   result.requiredGateFailed = result.tests.some(
-    (test) => test.required && test.status !== 'passed'
+    (test) => test.required && test.runs.some((run) => run.status !== 'passed')
   );
   result.score =
-    totalPoints === 0
-      ? result.requiredGateFailed
-        ? 0
-        : 100
-      : result.requiredGateFailed
-        ? 0
-        : result.earnedPoints;
+    result.requiredGateFailed || result.totalTests === 0
+      ? 0
+      : round((result.passedTests / result.totalTests) * 100);
 }
 
 async function preflight(
@@ -320,11 +289,12 @@ function emptyResult(
   startedAt: Date
 ): EvaluationResult {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status: 'valid',
     runnable: false,
     score: 0,
-    earnedPoints: 0,
+    passedTests: 0,
+    totalTests: 0,
     requiredGateFailed: false,
     tests: [],
     errors: [],
@@ -359,11 +329,7 @@ function validMeta(meta: XRBlocksTestMeta): boolean {
     typeof meta.name === 'string' &&
     (meta.kind === 'test' || meta.kind === 'session') &&
     typeof meta.required === 'boolean' &&
-    Number.isFinite(meta.logicalPoints) &&
-    meta.logicalPoints >= 0 &&
-    typeof meta.runId === 'string' &&
-    Number.isFinite(meta.runPoints) &&
-    meta.runPoints >= 0
+    typeof meta.runId === 'string'
   );
 }
 
@@ -371,8 +337,7 @@ function sameLogicalTest(test: TestResult, meta: XRBlocksTestMeta): boolean {
   return (
     test.name === meta.name &&
     test.kind === meta.kind &&
-    test.required === meta.required &&
-    Math.abs(test.pointsAvailable - meta.logicalPoints) <= SCORE_TOLERANCE
+    test.required === meta.required
   );
 }
 
