@@ -239,20 +239,40 @@ it_session(
 );
 ```
 
+When `--xrblocks-root` is set, ordinary tests can import the selected source
+tree through `@xrblocks/source`:
+
+```ts
+import {DepthTextures} from '@xrblocks/source/depth/DepthTextures.ts';
+import {DepthOptions} from '@xrblocks/source/depth/DepthOptions.ts';
+import {expect, it} from '@xrblocks/devtools/test';
+
+it('publishes CPU depth data', () => {
+  const options = new DepthOptions({usagePreference: ['cpu-optimized']});
+  const textures = new DepthTextures(options);
+  expect(textures.depthData).toEqual([]);
+});
+```
+
+Use ordinary tests for isolated behavior. Use session tests when the behavior
+must run through an application or the XR simulator. A bare `three` import uses
+the selected checkout's Three.js dependency so the test and source share their
+class identities.
+
 Run one test file against one prepared application:
 
 ```text
 xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 ```
 
-| Flag                    | Value and behavior                                        |
-| ----------------------- | --------------------------------------------------------- |
-| `--app <dir>`           | Required browser-runnable application directory.          |
-| `--xrblocks-root <dir>` | XR Blocks package or checkout used by the application.    |
-| `--entry <path>`        | HTML page inside the application. Default `index.html`.   |
-| `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`. |
-| `--timeout-ms <ms>`     | Browser startup timeout for session tests.                |
-| `-h`, `--help`          | Show command help.                                        |
+| Flag                    | Value and behavior                                                 |
+| ----------------------- | ------------------------------------------------------------------ |
+| `--app <dir>`           | Required browser-runnable application directory.                   |
+| `--xrblocks-root <dir>` | XR Blocks checkout used by the application and `@xrblocks/source`. |
+| `--entry <path>`        | HTML page inside the application. Default `index.html`.            |
+| `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`.          |
+| `--timeout-ms <ms>`     | Browser startup timeout for session tests.                         |
+| `-h`, `--help`          | Show command help.                                                 |
 
 Each test run contributes equally to the score. Hand and scenario variants count
 as separate test runs. Set `required: true` to make any failed variant set the

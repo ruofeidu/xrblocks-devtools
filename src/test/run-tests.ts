@@ -58,21 +58,46 @@ export async function runTests(
 
   const testFile = path.resolve(options.tests);
   const root = path.dirname(testFile);
+  const xrblocksRoot = options.app.xrblocksRoot
+    ? path.resolve(options.app.xrblocksRoot)
+    : undefined;
   let vitest;
   try {
-    vitest = await createVitest('test', {
-      root,
-      config: false,
-      watch: false,
-      run: true,
-      environment: 'node',
-      fileParallelism: false,
-      maxWorkers: 1,
-      retry: 0,
-      allowOnly: false,
-      passWithNoTests: false,
-      reporters: [SILENT_REPORTER],
-    });
+    vitest = await createVitest(
+      'test',
+      {
+        root,
+        config: false,
+        watch: false,
+        run: true,
+        environment: 'node',
+        fileParallelism: false,
+        maxWorkers: 1,
+        retry: 0,
+        allowOnly: false,
+        passWithNoTests: false,
+        reporters: [SILENT_REPORTER],
+      },
+      xrblocksRoot
+        ? {
+            resolve: {
+              alias: [
+                {
+                  find: '@xrblocks/source',
+                  replacement: path.join(xrblocksRoot, 'src'),
+                },
+                {
+                  find: /^three$/,
+                  replacement: path.join(
+                    xrblocksRoot,
+                    'node_modules/three/build/three.module.js'
+                  ),
+                },
+              ],
+            },
+          }
+        : undefined
+    );
   } catch (error) {
     invalidate(result, toError(error, 'verifier', 'collection'));
     return finish(options.outputDir, result);
@@ -80,9 +105,7 @@ export async function runTests(
 
   const provided: XRBlocksTestContext = {
     appDir: path.resolve(options.app.appDir),
-    xrblocksRoot: options.app.xrblocksRoot
-      ? path.resolve(options.app.xrblocksRoot)
-      : undefined,
+    xrblocksRoot,
     entry: options.app.entry,
     artifactDir: path.join(path.resolve(options.outputDir), 'artifacts'),
     sessionTimeoutMs: options.sessionTimeoutMs,

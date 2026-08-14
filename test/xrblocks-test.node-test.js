@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -30,6 +30,40 @@ test('scores ordinary tests by pass count', async (t) => {
   );
 });
 
+test('imports source from the selected XR Blocks root', async (t) => {
+  const xrblocksRoot = await makeSelectedRoot(t);
+  const {result} = await run(t, 'source-import.test.mjs', {
+    xrblocksRoot,
+  });
+
+  assert.equal(result.status, 'valid');
+  assert.equal(result.passedTests, 1);
+  assert.equal(result.totalTests, 1);
+});
+
+async function makeSelectedRoot(t) {
+  const selectedRoot = await mkdtemp(path.join(os.tmpdir(), 'xrblocks-root-'));
+  t.after(() => rm(selectedRoot, {recursive: true, force: true}));
+  await mkdir(path.join(selectedRoot, 'build'), {recursive: true});
+  await mkdir(path.join(selectedRoot, 'src'), {recursive: true});
+  await mkdir(path.join(selectedRoot, 'node_modules/three/build'), {
+    recursive: true,
+  });
+  await Promise.all([
+    writeFile(path.join(selectedRoot, 'build/xrblocks.js'), 'export {};\n'),
+    writeFile(
+      path.join(selectedRoot, 'src/selected-value.ts'),
+      "import {selectedThreeValue} from 'three';\n" +
+        'export const selectedValue = selectedThreeValue + 2;\n'
+    ),
+    writeFile(
+      path.join(selectedRoot, 'node_modules/three/build/three.module.js'),
+      'export const selectedThreeValue = 40;\n'
+    ),
+  ]);
+  return selectedRoot;
+}
+
 test('gates the score when a required test fails', async (t) => {
   const {result} = await run(t, 'required.test.mjs');
 
@@ -59,13 +93,13 @@ test('reports unsupported scenarios as a test runner error', async (t) => {
   assert.match(result.errors[0].message, /Scenario manifests require/);
 });
 
-async function run(t, fixture) {
+async function run(t, fixture, app = {}) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), 'xrblocks-test-'));
   t.after(() => rm(outputDir, {recursive: true, force: true}));
 
   const result = await runTests({
     tests: path.join(fixtures, fixture),
-    app: {appDir},
+    app: {appDir, ...app},
     outputDir,
   });
   return {result, outputDir};
