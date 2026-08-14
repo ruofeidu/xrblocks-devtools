@@ -37,10 +37,22 @@ export async function copyDir(source: string, destination: string) {
   });
 }
 
+/**
+ * Directory symlinks need administrator rights or Developer Mode on Windows,
+ * so link directories as junctions there instead.
+ */
+export async function symlinkDir(target: string, linkPath: string) {
+  await symlink(
+    path.resolve(target),
+    linkPath,
+    process.platform === 'win32' ? 'junction' : 'dir'
+  );
+}
+
 export async function replaceWithSymlink(target: string, linkPath: string) {
   await rm(linkPath, {recursive: true, force: true});
   await mkdir(path.dirname(linkPath), {recursive: true});
-  await symlink(path.resolve(target), linkPath);
+  await symlinkDir(target, linkPath);
 }
 
 export async function writeJson(filePath: string, value: unknown) {

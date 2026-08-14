@@ -1,4 +1,4 @@
-import {mkdir, mkdtemp, rm, symlink, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {chromium, type Browser, type Page} from 'playwright';
@@ -8,6 +8,7 @@ import {normalizePreviewInput} from './input.js';
 import {resolvePreviewRuntime} from './runtime.js';
 import type {VisualizeRequest, VisualizeResult} from './types.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
+import {symlinkDir} from '../fs-utils.js';
 import {serveDirectory, type RunningServer} from '../server.js';
 
 export async function visualize(
@@ -55,12 +56,8 @@ export async function visualize(
       options.kind === 'ui' ? options.xrblocksRoot : undefined
     );
     await mkdir(path.join(tempDir, 'runtime'), {recursive: true});
-    await symlink(
-      runtime.threeDir,
-      path.join(tempDir, 'runtime', 'three'),
-      'dir'
-    );
-    await symlink(input.assetsDir, path.join(tempDir, 'assets'), 'dir');
+    await symlinkDir(runtime.threeDir, path.join(tempDir, 'runtime', 'three'));
+    await symlinkDir(input.assetsDir, path.join(tempDir, 'assets'));
     const entryJs = path.join(tempDir, 'entry.js');
     await bundlePreviewEntry({
       kind: options.kind,
