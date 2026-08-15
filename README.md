@@ -259,6 +259,32 @@ must run through an application or the XR simulator. A bare `three` import uses
 the selected checkout's Three.js dependency so the test and source share their
 class identities.
 
+Use `judge` for a structured AI evaluation of text or image evidence:
+
+```ts
+import {judge} from '@xrblocks/devtools/test';
+
+const result = await judge<{passes: boolean; reason: string}>({
+  prompt: 'Does the image show a clearly visible red cube?',
+  input: {image: screenshotDataUrl},
+  schema: {
+    type: 'object',
+    properties: {
+      passes: {type: 'boolean'},
+      reason: {type: 'string'},
+    },
+    required: ['passes', 'reason'],
+  },
+});
+
+if (result.status === 'completed') expect(result.output.passes).toBe(true);
+```
+
+The judge uses an internal system instruction and deterministic Gemini output.
+It returns `skipped` without failing the test when `GEMINI_API_KEY` or the
+optional `@google/genai` package is missing. Other request and response errors
+fail normally.
+
 Run one test file against one prepared application:
 
 ```text
