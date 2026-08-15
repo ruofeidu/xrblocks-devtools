@@ -7,6 +7,7 @@ import {
   type TestModule,
 } from 'vitest/node';
 import type {XRBlocksTestMeta, XRBlocksTestContext} from './internal-types.js';
+import {JUDGE_MODEL_ENV} from './judge.js';
 import {
   writeResult,
   type EvaluationError,
@@ -30,6 +31,7 @@ export interface RunTestsOptions {
   app: AppBinding;
   outputDir: string;
   sessionTimeoutMs?: number;
+  judgeModel?: string;
 }
 
 export async function runTests(
@@ -76,6 +78,9 @@ export async function runTests(
         retry: 0,
         allowOnly: false,
         passWithNoTests: false,
+        env: options.judgeModel
+          ? {[JUDGE_MODEL_ENV]: options.judgeModel}
+          : undefined,
         reporters: [SILENT_REPORTER],
       },
       xrblocksRoot
@@ -286,6 +291,13 @@ async function preflight(
     throw new TypeError('app.xrblocksRoot must be a path.');
   if (options.app.entry !== undefined && typeof options.app.entry !== 'string')
     throw new TypeError('app.entry must be a string.');
+  if (
+    options.judgeModel !== undefined &&
+    (typeof options.judgeModel !== 'string' ||
+      options.judgeModel.trim().length === 0)
+  ) {
+    throw new TypeError('judgeModel must be a non-empty model name.');
+  }
   const tests = path.resolve(options.tests);
   if (!(await isFile(tests)))
     throw new TypeError(`Test file is missing: ${tests}.`);

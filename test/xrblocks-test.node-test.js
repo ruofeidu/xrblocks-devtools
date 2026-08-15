@@ -84,6 +84,20 @@ test('counts hand variants as individual tests', async (t) => {
   assert.equal(result.tests[0].runs.length, 2);
 });
 
+test('provides the selected judge model to the test process', async (t) => {
+  const {result} = await run(
+    t,
+    'judge-model.test.mjs',
+    {},
+    {
+      judgeModel: 'gemini-from-command',
+    }
+  );
+
+  assert.equal(result.status, 'valid');
+  assert.equal(result.passedTests, 1);
+});
+
 test('reports unsupported scenarios as a test runner error', async (t) => {
   const {result} = await run(t, 'scenario.test.mjs');
 
@@ -93,7 +107,7 @@ test('reports unsupported scenarios as a test runner error', async (t) => {
   assert.match(result.errors[0].message, /Scenario manifests require/);
 });
 
-async function run(t, fixture, app = {}) {
+async function run(t, fixture, app = {}, options = {}) {
   const outputDir = await mkdtemp(path.join(os.tmpdir(), 'xrblocks-test-'));
   t.after(() => rm(outputDir, {recursive: true, force: true}));
 
@@ -101,6 +115,7 @@ async function run(t, fixture, app = {}) {
     tests: path.join(fixtures, fixture),
     app: {appDir, ...app},
     outputDir,
+    ...options,
   });
   return {result, outputDir};
 }

@@ -1,10 +1,5 @@
 import {URL} from 'node:url';
-import {
-  requireGeminiApiKey,
-  runSessionAct,
-  type ActExitPayload,
-  type ActOptions,
-} from '../agent.js';
+import {runSessionAct, type ActExitPayload, type ActOptions} from '../agent.js';
 import type {MaterializedAppWorkspace} from './workspace.js';
 import type {RunningServer} from '../server.js';
 import {
@@ -314,7 +309,6 @@ export class XRBlocksSession {
 
   act(instruction: string, options: ActOptions = {}): Promise<ActExitPayload> {
     this.requireRuntime();
-    requireGeminiApiKey(options.apiKey);
     if (this.acting)
       throw new Error(
         'An agent act() call is already running for this Session.'

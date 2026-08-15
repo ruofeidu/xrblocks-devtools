@@ -1,7 +1,13 @@
-import type {GoogleGenAI} from '@google/genai';
 import type {XRBlocksSession} from './session/index.js';
 import type {JsonObject} from './types.js';
 import {raceWithSignal} from './abort.js';
+import {
+  createAi,
+  DEFAULT_AI_MODEL,
+  type Ai,
+  type AiPart,
+  type AiToolDeclaration,
+} from './ai.js';
 import {DEFAULT_SESSION_AGENT_PROMPT} from './session-agent-prompt.js';
 import {
   agentActionDeclarations,
@@ -16,8 +22,6 @@ import {
   type AgentObservationSelection,
 } from './agent-observations.js';
 
-export const DEFAULT_AGENT_MODEL = 'gemini-3.6-flash';
-
 export type ToolCall = {name: string; args: JsonObject};
 export type AgentModelRequest = {
   task: string;
@@ -27,6 +31,7 @@ export type AgentModelRequest = {
   latestObservation: JsonObject;
   observationKinds: AgentObservationKind[];
   events: ActEvent[];
+  signal?: AbortSignal;
 };
 export type AgentModelResponse = {toolCalls: ToolCall[]; raw?: unknown};
 export type AgentModelClient = {
@@ -44,7 +49,6 @@ export type ActOptions = {
   data?: JsonObject;
   maxTurns?: number;
   model?: string;
-  apiKey?: string;
   signal?: AbortSignal;
   onEvent?: (event: ActEvent) => void;
 };
@@ -70,15 +74,14 @@ export async function runSessionAct(
   if (!instruction.trim())
     throw new Error('Agent instruction must not be empty.');
   const signal = options.signal;
-  const model = options.model ?? DEFAULT_AGENT_MODEL;
+  const model = options.model ?? DEFAULT_AI_MODEL;
   const maxTurns = options.maxTurns ?? 30;
   if (!Number.isSafeInteger(maxTurns) || maxTurns <= 0) {
     throw new Error('maxTurns must be a positive integer.');
   }
   const observationKinds = normalizeAgentObservations(options.context ?? 'all');
   const modelClient =
-    dependencies.modelClient ??
-    (await GeminiAgentModelClient.create({apiKey: options.apiKey}));
+    dependencies.modelClient ?? (await AgentAiModelClient.create());
   const captureObservation =
     dependencies.captureObservation ?? captureAgentObservation;
   const executeAction = dependencies.executeAction ?? executeAgentAction;
@@ -114,6 +117,7 @@ export async function runSessionAct(
         latestObservation,
         observationKinds,
         events,
+        signal,
       }),
       signal
     );
@@ -177,22 +181,15 @@ export async function runSessionAct(
   throw new Error(`Stopped after ${maxTurns} turns without exit.`);
 }
 
-export class GeminiAgentModelClient implements AgentModelClient {
-  private constructor(
-    private readonly client: GoogleGenAI,
-    private readonly sdk: typeof import('@google/genai')
-  ) {}
+class AgentAiModelClient implements AgentModelClient {
+  private constructor(private readonly ai: Ai) {}
 
-  static async create(options: {apiKey?: string} = {}) {
-    const apiKey = requireGeminiApiKey(options.apiKey);
-    const sdk = await requireGeminiSdk();
-    return new GeminiAgentModelClient(new sdk.GoogleGenAI({apiKey}), sdk);
+  static async create() {
+    return new AgentAiModelClient(await createAi());
   }
 
   async generate(request: AgentModelRequest): Promise<AgentModelResponse> {
-    const parts: Array<
-      {text: string} | {inlineData: {mimeType: string; data: string}}
-    > = [
+    const parts: AiPart[] = [
       {
         text: `Task: ${request.task}\nTurn ${request.turn} of ${request.maxTurns}.\nRespond with exactly one declared tool call.`,
       },
@@ -202,59 +199,18 @@ export class GeminiAgentModelClient implements AgentModelClient {
     for (const image of observationImages(request.latestObservation)) {
       parts.push({text: `${image.label}:`});
       parts.push({
-        inlineData: {mimeType: 'image/png', data: dataUrlData(image.dataUrl)},
+        image: {mimeType: 'image/png', data: image.dataUrl},
       });
     }
-    const functionDeclarations = geminiToolDeclarations(this.sdk.Type);
-    const response = await this.client.models.generateContent({
+    const toolCalls = await this.ai.generateTools({
+      operation: 'agent',
       model: request.model,
-      contents: [{role: 'user', parts}],
-      config: {
-        systemInstruction: buildAgentSystemInstruction(
-          request.observationKinds
-        ),
-        toolConfig: {
-          functionCallingConfig: {
-            mode: this.sdk.FunctionCallingConfigMode.ANY,
-            allowedFunctionNames: functionDeclarations.map(({name}) => name),
-          },
-        },
-        tools: [{functionDeclarations: functionDeclarations as never}],
-      },
+      systemInstruction: buildAgentSystemInstruction(request.observationKinds),
+      parts,
+      tools: agentToolDeclarations(),
+      signal: request.signal,
     });
-    return parseGeminiResponse(response);
-  }
-}
-
-/** @internal */
-export function requireGeminiApiKey(apiKey?: string) {
-  const resolved = apiKey?.trim() || process.env.GEMINI_API_KEY?.trim();
-  if (resolved) return resolved;
-  throw new Error(
-    'Gemini API key is required. Pass options.apiKey or set GEMINI_API_KEY.'
-  );
-}
-
-/** @internal */
-export async function requireGeminiSdk(): Promise<
-  typeof import('@google/genai')
-> {
-  try {
-    return await import('@google/genai');
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      'code' in error &&
-      (error.code === 'ERR_MODULE_NOT_FOUND' ||
-        error.code === 'MODULE_NOT_FOUND') &&
-      error.message.includes('@google/genai')
-    ) {
-      throw new Error(
-        'Natural-language actions require @google/genai. Install it with `npm install --save-dev @google/genai`.',
-        {cause: error}
-      );
-    }
-    throw error;
+    return {toolCalls};
   }
 }
 
@@ -300,9 +256,7 @@ function recentEventsText(events: ActEvent[], limit = 8) {
   );
 }
 
-function geminiToolDeclarations(
-  type: Pick<typeof import('@google/genai').Type, 'OBJECT' | 'STRING'>
-) {
+function agentToolDeclarations(): AiToolDeclaration[] {
   return [
     ...agentActionDeclarations(),
     {
@@ -310,14 +264,14 @@ function geminiToolDeclarations(
       description:
         'Stop the agent and return a message with optional structured data.',
       parameters: {
-        type: type.OBJECT,
+        type: 'OBJECT',
         properties: {
           message: {
-            type: type.STRING,
+            type: 'STRING',
             description: 'A concise final message for the caller.',
           },
           data: {
-            type: type.OBJECT,
+            type: 'OBJECT',
             description: 'Structured JSON data requested by the caller.',
           },
         },
@@ -331,30 +285,10 @@ function elapsedMs(clock: () => number, start: number) {
   return Math.max(0, Math.floor(clock() - start));
 }
 
-function dataUrlData(dataUrl: string) {
-  const comma = dataUrl.indexOf(',');
-  return comma < 0 ? dataUrl : dataUrl.slice(comma + 1);
-}
-
 function toJsonObject(value: unknown): JsonObject {
   return isJsonObject(value) ? value : {value};
 }
 
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function parseGeminiResponse(response: unknown): AgentModelResponse {
-  const anyResponse = response as {
-    functionCalls?: Array<{name?: string; args?: JsonObject}>;
-  };
-  return {
-    toolCalls: (anyResponse.functionCalls ?? [])
-      .filter(
-        (call): call is {name: string; args?: JsonObject} =>
-          typeof call.name === 'string'
-      )
-      .map((call) => ({name: call.name, args: call.args ?? {}})),
-    raw: response,
-  };
 }

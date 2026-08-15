@@ -111,7 +111,7 @@ Install the optional agent dependency and provide a Gemini API key:
 
 ```bash
 npm install --save-dev @google/genai
-export GEMINI_API_KEY='your-key'
+echo "GEMINI_API_KEY=your-key" >> .env
 npx xrblocks-devtools agent \
   --app-dir ./app \
   --task 'Open the settings panel and verify that spatial audio is enabled' \

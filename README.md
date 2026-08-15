@@ -172,13 +172,12 @@ xrblocks-devtools interact (--app-dir <dir> | --url <url>) [options]
 | `--simulator-reach-limit`            | Enforce the simulator hand-reach radius.                                                                       |
 | `--simulator-navmesh`                | Reload the active simulator environment with its navmesh enabled, then constrain `navigateTo()`.               |
 | `--embodied-control-import <module>` | Browser-loadable module specifier or URL for the embodied-control addon. Useful for URL sessions.              |
-| `--timeout-ms <ms>`                  | Browser startup and operation timeout. Default `30000`.                                                        |
+| `--timeout-ms <ms>`                  | Browser startup and operation timeout. Default `120000`.                                                       |
 | `--record-video <path>`              | Record action windows. Trimming targets MP4 when ffmpeg is available.                                          |
 | `--record-video-timeline <path>`     | Timeline JSON path. Default `<video-name>.timeline.json`.                                                      |
 | `--record-video-padding-ms <ms>`     | Time retained before and after actions. Default `500`.                                                         |
 | `--keep-raw-video`                   | Preserve Playwright's raw WebM after successful trimming.                                                      |
 | `--no-trim-video`                    | Keep the complete WebM. A non-WebM output name is changed to `.webm`.                                          |
-| `--env-file <path>`                  | Load variables from one optional environment file.                                                             |
 | `-h`, `--help`                       | Show flags and REPL functions.                                                                                 |
 
 The prompt is a JavaScript REPL. Call functions directly; returned promises are
@@ -208,16 +207,14 @@ The agent command accepts all Interact session and recording flags plus:
 | `--task <text>`          | Required natural-language task.                                                                                     |
 | `--model <model>`        | Gemini model. Default `gemini-3.6-flash`.                                                                           |
 | `--max-turns <count>`    | Positive model-turn limit. Default `30`.                                                                            |
-| `--api-key <key>`        | Override `GEMINI_API_KEY`. Prefer the environment variable.                                                         |
 | `--observations <kinds>` | Comma-separated `image`, `semantic-tree`, `visible`, `som`, `tags`, `state`, `spatial`, and/or `view`. Default all. |
 | `--quiet`                | Suppress progress events on stderr.                                                                                 |
 | `-h`, `--help`           | Show command help.                                                                                                  |
 
-For `interact`, `agent`, and `test`, the CLI loads the first available environment file:
-an explicit `--env-file`, `<app-dir>/.env`, or `./.env`. A missing file is not
-an error. Existing shell variables take priority over file values, and
-`--api-key` takes priority over `GEMINI_API_KEY`. Only `agent` requires the key
-before opening Chromium; `interact` can start without it.
+At startup, the CLI loads an optional `.env` file from the current working
+directory. Existing shell variables take priority. Set `GEMINI_API_KEY` there
+for AI features. Only `agent` requires the key before opening Chromium;
+`interact` can start without it.
 
 ### Test
 
@@ -298,7 +295,7 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--entry <path>`        | HTML page inside the application. Default `index.html`.            |
 | `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`.          |
 | `--timeout-ms <ms>`     | Browser startup timeout for session tests.                         |
-| `--env-file <path>`     | Load variables from one optional environment file.                 |
+| `--judge-model <model>` | Model used by `judge()`. Overrides `MODEL_NAME` and the default.   |
 | `-h`, `--help`          | Show command help.                                                 |
 
 Each test run contributes equally to the score. Hand and scenario variants count
@@ -432,7 +429,7 @@ object.userData.xrblocksDevtools = {
 ```
 
 `session.act()` is an optional programmatic action loop. It requires
-`options.apiKey` or `GEMINI_API_KEY` and the optional `@google/genai` package.
+`GEMINI_API_KEY` and the optional `@google/genai` package.
 The agent ends with an `exit` tool call. The resolved result contains its final
 `message` and any optional JSON object in `data`. The `agent` command prints
 this same payload when it exits. It is not an assertion or benchmark score.

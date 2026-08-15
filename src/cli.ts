@@ -3,16 +3,17 @@ import {realpathSync} from 'node:fs';
 import path from 'node:path';
 import {stdin} from 'node:process';
 import {fileURLToPath} from 'node:url';
-import {requireGeminiApiKey, requireGeminiSdk} from './agent.js';
+import {createAi} from './ai.js';
 import {XRBlocksSession} from './session/index.js';
 import {commandHelp, parseCommand} from './command-config.js';
-import {loadProjectEnv} from './env.js';
+import {loadDotEnv} from './env.js';
 import {runInteractive, interactiveHelpText} from './interactive.js';
 import {installInterruptHandlers} from './signals.js';
 import {runTests} from './test/run-tests.js';
 import {visualize} from './visualize/index.js';
 
 export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
+  loadDotEnv();
   const command = parseCommand(argv, signal);
   switch (command.kind) {
     case 'help': {
@@ -47,17 +48,9 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       return 0;
     }
     case 'interact':
-      loadProjectEnv({
-        appDir: command.session.appDir,
-        envFile: command.envFile,
-      });
       await runInteractive(command.session);
       return 0;
     case 'test': {
-      loadProjectEnv({
-        appDir: command.appDir,
-        envFile: command.envFile,
-      });
       const result = await runTests({
         tests: command.tests,
         app: {
@@ -67,23 +60,18 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
         },
         outputDir: command.outputDir,
         sessionTimeoutMs: command.sessionTimeoutMs,
+        judgeModel: command.judgeModel,
       });
       console.log(JSON.stringify(result, null, 2));
       return result.status === 'valid' ? 0 : 1;
     }
     case 'agent': {
-      loadProjectEnv({
-        appDir: command.session.appDir,
-        envFile: command.envFile,
-      });
-      requireGeminiApiKey(command.apiKey);
-      await requireGeminiSdk();
+      await createAi();
       const session = await XRBlocksSession.open(command.session);
       const payload = await session
         .act(command.task, {
           model: command.model,
           maxTurns: command.maxTurns,
-          apiKey: command.apiKey,
           context: command.context,
           onEvent: command.quiet ? undefined : printAgentEvent,
         })

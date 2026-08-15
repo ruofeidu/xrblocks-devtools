@@ -36,15 +36,13 @@ export type ParsedCommand =
       assetsDir?: string;
       xrblocksRoot?: string;
     }
-  | {kind: 'interact'; session: XRBlocksSessionConfig; envFile?: string}
+  | {kind: 'interact'; session: XRBlocksSessionConfig}
   | {
       kind: 'agent';
       session: XRBlocksSessionConfig;
       task: string;
       model?: string;
       maxTurns?: number;
-      apiKey?: string;
-      envFile?: string;
       context: AgentObservationKind[];
       quiet: boolean;
     }
@@ -56,7 +54,7 @@ export type ParsedCommand =
       entry?: string;
       outputDir: string;
       sessionTimeoutMs?: number;
-      envFile?: string;
+      judgeModel?: string;
     };
 
 const sessionFlags = [
@@ -109,10 +107,6 @@ const recordingFlags = [
   flag('no-trim-video', 'boolean', 'Do not trim the Playwright video'),
 ] as const;
 
-const environmentFlags = [
-  flag('env-file', 'string', 'Load variables from this env file', 'path'),
-] as const;
-
 const definitions: Record<CommandName, CommandDefinition> = {
   visualize: {
     name: 'visualize',
@@ -141,7 +135,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
     name: 'interact',
     usage: 'interact (--app-dir <dir> | --url <url>) [options]',
     summary: 'Open Interactive Mode for a Session.',
-    flags: [...sessionFlags, ...recordingFlags, ...environmentFlags],
+    flags: [...sessionFlags, ...recordingFlags],
   },
   agent: {
     name: 'agent',
@@ -150,11 +144,9 @@ const definitions: Record<CommandName, CommandDefinition> = {
     flags: [
       ...sessionFlags,
       ...recordingFlags,
-      ...environmentFlags,
       flag('task', 'string', 'Describe the task for the agent', 'text'),
       flag('model', 'string', 'Select the model', 'model'),
       flag('max-turns', 'number', 'Limit model turns', 'count'),
-      flag('api-key', 'string', 'Override the model provider key', 'key'),
       flag(
         'observations',
         'string',
@@ -179,7 +171,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag('entry', 'string', 'Select an app page path', 'path'),
       flag('output', 'string', 'Write result.json and artifacts here', 'dir'),
       flag('timeout-ms', 'number', 'Set the browser startup timeout', 'ms'),
-      ...environmentFlags,
+      flag('judge-model', 'string', 'Select the model for AI judges', 'model'),
     ],
   },
 };
@@ -251,7 +243,7 @@ export function parseCommand(
       outputDir:
         stringValue(parsed.flags, 'output') ?? 'artifacts/xrblocks-test',
       sessionTimeoutMs: numberValue(parsed.flags, 'timeout-ms'),
-      envFile: stringValue(parsed.flags, 'env-file'),
+      judgeModel: stringValue(parsed.flags, 'judge-model'),
     };
   }
 
@@ -263,7 +255,6 @@ export function parseCommand(
     return {
       kind: name,
       session,
-      envFile: stringValue(parsed.flags, 'env-file'),
     };
   }
 
@@ -275,8 +266,6 @@ export function parseCommand(
     task,
     model: stringValue(parsed.flags, 'model'),
     maxTurns: numberValue(parsed.flags, 'max-turns'),
-    apiKey: stringValue(parsed.flags, 'api-key'),
-    envFile: stringValue(parsed.flags, 'env-file'),
     context: parseAgentObservations(stringValue(parsed.flags, 'observations')),
     quiet: Boolean(parsed.flags.quiet),
   };
