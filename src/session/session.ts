@@ -189,7 +189,7 @@ export class XRBlocksSession {
       this.runtime = this.dependencies.createRuntime({
         url: targetUrl,
         headless: this.config.headless ?? true,
-        timeoutMs: this.config.timeoutMs ?? 30_000,
+        timeoutMs: this.config.timeoutMs ?? 120_000,
         viewport: this.config.viewport ?? {width: 1280, height: 900},
         embodiedControlOptions: {
           autoPause: true,

@@ -76,7 +76,7 @@ export class PlaywrightSessionAdapter {
       this.page = await this.context.newPage();
       this.options.onVideoStarted?.();
       signal?.throwIfAborted();
-      this.page.setDefaultTimeout(this.options.timeoutMs ?? 30_000);
+      this.page.setDefaultTimeout(this.options.timeoutMs ?? 120_000);
       this.page.on('console', (message) => this.onConsole(message));
       this.page.on('pageerror', (error) => this.onPageError(error));
       this.page.on('requestfailed', (request) => this.onRequestFailed(request));
