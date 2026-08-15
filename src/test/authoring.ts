@@ -65,6 +65,7 @@ type VitestItCall = (
 ) => void;
 
 let nextLogicalId = 0;
+const DEFAULT_SESSION_TEST_TIMEOUT_MS = 120_000;
 
 export const it: XRBlocksIt = Object.assign(makeIt(vitestIt), {
   only: makeIt(vitestIt.only),
@@ -117,7 +118,13 @@ export function it_session(
 
     vitestIt(
       `${name} [${run.primaryHand}, ${run.scenario ?? 'default'}]`,
-      testOptions(sharedOptions, meta),
+      testOptions(
+        {
+          ...sharedOptions,
+          timeout: sharedOptions.timeout ?? DEFAULT_SESSION_TEST_TIMEOUT_MS,
+        },
+        meta
+      ),
       async (context) => {
         await runSessionTest(
           callback,
