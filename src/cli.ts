@@ -54,6 +54,10 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       await runInteractive(command.session);
       return 0;
     case 'test': {
+      loadProjectEnv({
+        appDir: command.appDir,
+        envFile: command.envFile,
+      });
       const result = await runTests({
         tests: command.tests,
         app: {
@@ -75,7 +79,7 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       requireGeminiApiKey(command.apiKey);
       await requireGeminiSdk();
       const session = await XRBlocksSession.open(command.session);
-      const result = await session
+      const payload = await session
         .act(command.task, {
           model: command.model,
           maxTurns: command.maxTurns,
@@ -84,17 +88,8 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
           onEvent: command.quiet ? undefined : printAgentEvent,
         })
         .finally(() => session.close());
-      console.log(
-        JSON.stringify(
-          {
-            status: result.status,
-            summary: result.summary,
-          },
-          null,
-          2
-        )
-      );
-      return result.status === 'succeeded' ? 0 : 1;
+      console.log(JSON.stringify(payload, null, 2));
+      return 0;
     }
   }
 }

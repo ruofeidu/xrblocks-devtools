@@ -2,8 +2,8 @@ import {URL} from 'node:url';
 import {
   requireGeminiApiKey,
   runSessionAct,
+  type ActExitPayload,
   type ActOptions,
-  type ActResult,
 } from '../agent.js';
 import type {MaterializedAppWorkspace} from './workspace.js';
 import type {RunningServer} from '../server.js';
@@ -108,7 +108,7 @@ export class XRBlocksSession {
   private started = false;
   private closing?: Promise<void>;
   private removeAbortListener?: () => void;
-  private acting?: Promise<ActResult>;
+  private acting?: Promise<ActExitPayload>;
 
   private readonly dependencies: SessionDependencies;
 
@@ -312,7 +312,7 @@ export class XRBlocksSession {
     );
   }
 
-  act(instruction: string, options: ActOptions = {}): Promise<ActResult> {
+  act(instruction: string, options: ActOptions = {}): Promise<ActExitPayload> {
     this.requireRuntime();
     requireGeminiApiKey(options.apiKey);
     if (this.acting)

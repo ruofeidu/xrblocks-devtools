@@ -22,7 +22,7 @@ export type {
   NamedHandPose,
 } from './session/index.js';
 export type {BrowserDiagnostics} from './session/index.js';
-export type {ActEvent, ActOptions, ActResult} from './agent.js';
+export type {ActEvent, ActExitPayload, ActOptions} from './agent.js';
 export {visualize} from './visualize/index.js';
 export type {
   ModelVisualizeRequest,

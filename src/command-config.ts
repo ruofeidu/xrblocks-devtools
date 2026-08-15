@@ -56,6 +56,7 @@ export type ParsedCommand =
       entry?: string;
       outputDir: string;
       sessionTimeoutMs?: number;
+      envFile?: string;
     };
 
 const sessionFlags = [
@@ -178,6 +179,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag('entry', 'string', 'Select an app page path', 'path'),
       flag('output', 'string', 'Write result.json and artifacts here', 'dir'),
       flag('timeout-ms', 'number', 'Set the browser startup timeout', 'ms'),
+      ...environmentFlags,
     ],
   },
 };
@@ -249,6 +251,7 @@ export function parseCommand(
       outputDir:
         stringValue(parsed.flags, 'output') ?? 'artifacts/xrblocks-test',
       sessionTimeoutMs: numberValue(parsed.flags, 'timeout-ms'),
+      envFile: stringValue(parsed.flags, 'env-file'),
     };
   }
 

@@ -213,7 +213,7 @@ The agent command accepts all Interact session and recording flags plus:
 | `--quiet`                | Suppress progress events on stderr.                                                                                 |
 | `-h`, `--help`           | Show command help.                                                                                                  |
 
-For `interact` and `agent`, the CLI loads the first available environment file:
+For `interact`, `agent`, and `test`, the CLI loads the first available environment file:
 an explicit `--env-file`, `<app-dir>/.env`, or `./.env`. A missing file is not
 an error. Existing shell variables take priority over file values, and
 `--api-key` takes priority over `GEMINI_API_KEY`. Only `agent` requires the key
@@ -298,6 +298,7 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--entry <path>`        | HTML page inside the application. Default `index.html`.            |
 | `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`.          |
 | `--timeout-ms <ms>`     | Browser startup timeout for session tests.                         |
+| `--env-file <path>`     | Load variables from one optional environment file.                 |
 | `-h`, `--help`          | Show command help.                                                 |
 
 Each test run contributes equally to the score. Hand and scenario variants count
@@ -432,7 +433,9 @@ object.userData.xrblocksDevtools = {
 
 `session.act()` is an optional programmatic action loop. It requires
 `options.apiKey` or `GEMINI_API_KEY` and the optional `@google/genai` package.
-It is not an assertion or benchmark score.
+The agent ends with an `exit` tool call. The resolved result contains its final
+`message` and any optional JSON object in `data`. The `agent` command prints
+this same payload when it exits. It is not an assertion or benchmark score.
 
 ## Keep Your API Key Secure
 

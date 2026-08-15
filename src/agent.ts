@@ -36,13 +36,7 @@ export type AgentModelClient = {
 export type ActEvent = JsonObject & {
   timestamp_ms: number;
   turn: number;
-  type:
-    | 'observation'
-    | 'action'
-    | 'action_error'
-    | 'succeed'
-    | 'fail'
-    | 'invalid_response';
+  type: 'observation' | 'action' | 'action_error' | 'exit' | 'invalid_response';
 };
 
 export type ActOptions = {
@@ -55,11 +49,9 @@ export type ActOptions = {
   onEvent?: (event: ActEvent) => void;
 };
 
-export type ActResult = {
-  status: 'succeeded' | 'failed';
-  summary: string;
-  turns: number;
-  events: ActEvent[];
+export type ActExitPayload = {
+  message: string;
+  data?: JsonObject;
 };
 
 type SessionActDependencies = {
@@ -74,7 +66,7 @@ export async function runSessionAct(
   instruction: string,
   options: ActOptions = {},
   dependencies: SessionActDependencies = {}
-): Promise<ActResult> {
+): Promise<ActExitPayload> {
   if (!instruction.trim())
     throw new Error('Agent instruction must not be empty.');
   const signal = options.signal;
@@ -133,23 +125,21 @@ export async function runSessionAct(
         type: 'invalid_response',
         result: {summary},
       });
-      return {status: 'failed', summary, turns: turn, events};
+      throw new Error(summary);
     }
     const call = response.toolCalls[0]!;
-    if (call.name === 'succeed' || call.name === 'fail') {
-      const summary = String(
-        call.args.summary ??
-          (call.name === 'succeed' ? 'Task completed.' : 'Task failed.')
-      );
-      const status = call.name === 'succeed' ? 'succeeded' : 'failed';
+    if (call.name === 'exit') {
+      const message = String(call.args.message ?? 'Agent exited.');
+      const data = isJsonObject(call.args.data) ? call.args.data : undefined;
+      const payload = {message, ...(data ? {data} : {})};
       record({
         timestamp_ms: elapsedMs(clock, startedAt),
         turn,
-        type: call.name,
+        type: 'exit',
         tool_call: call,
-        result: {summary},
+        result: payload,
       });
-      return {status, summary, turns: turn, events};
+      return payload;
     }
     try {
       const toolResult = await executeAction(session, call.name, call.args);
@@ -184,12 +174,7 @@ export async function runSessionAct(
       result: latestObservation,
     });
   }
-  return {
-    status: 'failed',
-    summary: `Stopped after ${maxTurns} turns without succeed.`,
-    turns: maxTurns,
-    events,
-  };
+  throw new Error(`Stopped after ${maxTurns} turns without exit.`);
 }
 
 export class GeminiAgentModelClient implements AgentModelClient {
@@ -321,21 +306,22 @@ function geminiToolDeclarations(
   return [
     ...agentActionDeclarations(),
     {
-      name: 'succeed',
-      description: 'Stop after completing the task.',
+      name: 'exit',
+      description:
+        'Stop the agent and return a message with optional structured data.',
       parameters: {
         type: type.OBJECT,
-        properties: {summary: {type: type.STRING}},
-        required: ['summary'],
-      },
-    },
-    {
-      name: 'fail',
-      description: 'Stop because the task cannot be completed.',
-      parameters: {
-        type: type.OBJECT,
-        properties: {summary: {type: type.STRING}},
-        required: ['summary'],
+        properties: {
+          message: {
+            type: type.STRING,
+            description: 'A concise final message for the caller.',
+          },
+          data: {
+            type: type.OBJECT,
+            description: 'Structured JSON data requested by the caller.',
+          },
+        },
+        required: ['message'],
       },
     },
   ];
