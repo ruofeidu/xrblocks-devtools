@@ -6,21 +6,22 @@ import {
   type SessionVideoRecordingOptions,
   type VideoTimeline,
 } from './video.js';
-import type {
-  BrowserDiagnostics,
-  AngularSpeedOptions,
-  EulerRotation,
-  PhysicalHand,
-  HandPoseRotations,
-  LinearMotion,
-  LinearSpeedOptions,
-  NamedHandPose,
-  ObjectIdentity,
-  ObjectInspection,
-  SceneContextOptions,
-  Viewport,
+import {
+  DEFAULT_SESSION_TIMEOUT_MS,
+  HAND_POSE_JOINT_NAMES,
+  type AngularSpeedOptions,
+  type BrowserDiagnostics,
+  type EulerRotation,
+  type PhysicalHand,
+  type HandPoseRotations,
+  type LinearMotion,
+  type LinearSpeedOptions,
+  type NamedHandPose,
+  type ObjectIdentity,
+  type ObjectInspection,
+  type SceneContextOptions,
+  type Viewport,
 } from './types.js';
-import {HAND_POSE_JOINT_NAMES} from './types.js';
 import type {JsonObject} from '../types.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
 import type {AudioInjection, AudioInjectionResult} from './audio.js';
@@ -184,7 +185,7 @@ export class XRBlocksSession {
       this.runtime = this.dependencies.createRuntime({
         url: targetUrl,
         headless: this.config.headless ?? true,
-        timeoutMs: this.config.timeoutMs ?? 120_000,
+        timeoutMs: this.config.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS,
         viewport: this.config.viewport ?? {width: 1280, height: 900},
         embodiedControlOptions: {
           autoPause: true,

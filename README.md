@@ -172,7 +172,7 @@ xrblocks-devtools interact (--app-dir <dir> | --url <url>) [options]
 | `--simulator-reach-limit`            | Enforce the simulator hand-reach radius.                                                                       |
 | `--simulator-navmesh`                | Reload the active simulator environment with its navmesh enabled, then constrain `navigateTo()`.               |
 | `--embodied-control-import <module>` | Browser-loadable module specifier or URL for the embodied-control addon. Useful for URL sessions.              |
-| `--timeout-ms <ms>`                  | Browser startup and operation timeout. Default `120000`.                                                       |
+| `--timeout-ms <ms>`                  | Browser startup and operation timeout. Default `300000`.                                                       |
 | `--record-video <path>`              | Record action windows. Trimming targets MP4 when ffmpeg is available.                                          |
 | `--record-video-timeline <path>`     | Timeline JSON path. Default `<video-name>.timeline.json`.                                                      |
 | `--record-video-padding-ms <ms>`     | Time retained before and after actions. Default `500`.                                                         |
@@ -294,7 +294,7 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--xrblocks-root <dir>` | XR Blocks checkout used by the application and `@xrblocks/source`. |
 | `--entry <path>`        | HTML page inside the application. Default `index.html`.            |
 | `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`.          |
-| `--timeout-ms <ms>`     | Browser startup timeout for session tests.                         |
+| `--timeout-ms <ms>`     | Browser startup timeout for session tests. Default `300000`.       |
 | `--judge-model <model>` | Model used by `judge()`. Overrides `MODEL_NAME` and the default.   |
 | `-h`, `--help`          | Show command help.                                                 |
 

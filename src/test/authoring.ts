@@ -14,7 +14,11 @@ import {
 } from 'vitest';
 import path from 'node:path';
 import type {SimulatorEnvironment} from 'xrblocks';
-import {XRBlocksSession, type PhysicalHand} from '../session/index.js';
+import {
+  DEFAULT_SESSION_TIMEOUT_MS,
+  XRBlocksSession,
+  type PhysicalHand,
+} from '../session/index.js';
 import {XRBlocksTestFailure} from './failure.js';
 import type {XRBlocksTestMeta} from './internal-types.js';
 
@@ -69,8 +73,6 @@ type VitestItCall = (
 ) => void;
 
 let nextLogicalId = 0;
-const DEFAULT_SESSION_TEST_TIMEOUT_MS = 120_000;
-
 export const it: XRBlocksIt = Object.assign(makeIt(vitestIt), {
   only: makeIt(vitestIt.only),
   skip: makeIt(vitestIt.skip),
@@ -125,7 +127,7 @@ export function it_session(
       testOptions(
         {
           ...sharedOptions,
-          timeout: sharedOptions.timeout ?? DEFAULT_SESSION_TEST_TIMEOUT_MS,
+          timeout: sharedOptions.timeout ?? DEFAULT_SESSION_TIMEOUT_MS,
         },
         meta
       ),

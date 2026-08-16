@@ -1,4 +1,5 @@
 export {XRBlocksSession, handIndex, resolveAppUrl} from './session.js';
+export {DEFAULT_SESSION_TIMEOUT_MS} from './types.js';
 export type {
   SessionObjects,
   SessionTarget,

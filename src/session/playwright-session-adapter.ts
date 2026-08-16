@@ -6,7 +6,11 @@ import type {
   Request,
 } from 'playwright';
 import type {JsonObject} from '../types.js';
-import type {BrowserDiagnostics, Viewport} from './types.js';
+import {
+  DEFAULT_SESSION_TIMEOUT_MS,
+  type BrowserDiagnostics,
+  type Viewport,
+} from './types.js';
 import type {AudioInjectionResult} from './audio.js';
 import {injectedAudioSource, injectedHarnessSource} from './injected-source.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
@@ -76,7 +80,9 @@ export class PlaywrightSessionAdapter {
       this.page = await this.context.newPage();
       this.options.onVideoStarted?.();
       signal?.throwIfAborted();
-      this.page.setDefaultTimeout(this.options.timeoutMs ?? 120_000);
+      this.page.setDefaultTimeout(
+        this.options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS
+      );
       this.page.on('console', (message) => this.onConsole(message));
       this.page.on('pageerror', (error) => this.onPageError(error));
       this.page.on('requestfailed', (request) => this.onRequestFailed(request));
