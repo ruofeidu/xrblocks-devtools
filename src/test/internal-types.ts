@@ -1,4 +1,5 @@
 import type {BrowserDiagnostics, PhysicalHand} from '../session/index.js';
+import type {SceneVariant} from './authoring.js';
 
 export interface XRBlocksTestMeta {
   schemaVersion: 1;
@@ -9,7 +10,7 @@ export interface XRBlocksTestMeta {
   runId: string;
   primaryHand?: PhysicalHand;
   secondaryHand?: PhysicalHand;
-  scenario?: string;
+  scene?: SceneVariant;
   realTime?: boolean;
   video?: string;
   videoTimeline?: string;

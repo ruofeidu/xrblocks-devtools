@@ -46,6 +46,46 @@ function ready() {
   return {ready: true, simulator, deviceCamera};
 }
 
+async function setSimulatorEnvironment(scene) {
+  const core = getCore();
+  const simulator = core.simulator;
+  if (typeof simulator?.setEnvironment !== 'function') {
+    throw new Error('XR Blocks simulator environment loading is unavailable.');
+  }
+
+  if (typeof scene === 'string') {
+    const environments = core.options?.simulator?.environments || [];
+    const environment = environments.find(
+      (candidate) => candidate.name === scene
+    );
+    if (!environment) {
+      const names = environments
+        .map((candidate) => candidate.name)
+        .filter(Boolean)
+        .join(', ');
+      throw new Error(
+        `Unknown XR Blocks simulator environment: ${scene}. Available environments: ${names || 'none'}.`
+      );
+    }
+    await simulator.setEnvironment(scene, environment.manifestPath);
+  } else if (
+    scene &&
+    typeof scene === 'object' &&
+    typeof scene.path === 'string' &&
+    scene.path.length > 0
+  ) {
+    await simulator.setEnvironment(new URL(scene.path, location.href).href);
+  } else {
+    throw new Error(
+      'A simulator environment must be an SDK environment name or {path: string}.'
+    );
+  }
+
+  core.stepFrame?.();
+  await Promise.resolve();
+  return {loaded: true, scene};
+}
+
 async function observeCamera(args = {}) {
   const result = objectPose(getCamera());
   if (args.screenshot) {
@@ -187,6 +227,7 @@ const observations = {
 window.__xrblocksDevtoolsRuntime = {
   init,
   ready,
+  setSimulatorEnvironment,
   resolveTarget,
   findObjectsByTag,
   navigateTo,

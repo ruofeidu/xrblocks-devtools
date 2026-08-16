@@ -21,6 +21,8 @@ export {
   type SessionTestFunction,
   type SessionTestOptions,
   type SessionTestRun,
+  type BuiltInScene,
+  type SceneVariant,
 } from './authoring.js';
 export type {
   EvaluationError,

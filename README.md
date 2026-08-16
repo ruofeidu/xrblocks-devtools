@@ -298,11 +298,26 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--judge-model <model>` | Model used by `judge()`. Overrides `MODEL_NAME` and the default.   |
 | `-h`, `--help`          | Show command help.                                                 |
 
-Each test run contributes equally to the score. Hand and scenario variants count
+Each test run contributes equally to the score. Hand and scene variants count
 as separate test runs. Set `required: true` to make any failed variant set the
 score to `0`. Session tests receive the complete `XRBlocksSession`. `realTime`
 defaults to `false`. A session test records video only when its options include a
 simple `video` name.
+
+Use `scenes` to run a session test against XR Blocks SDK environments or custom
+simulator manifests. SDK environments use their display names. Manifest paths
+are relative to the application page. If `scenes` is omitted or empty, the SDK
+default environment remains active.
+
+```ts
+it_session(
+  'works in each room',
+  {scenes: ['Living Room', 'Office', {path: './scenes/table.json'}]},
+  async (session, run) => {
+    // run.scene identifies the active scene variant.
+  }
+);
+```
 
 ## Interactive function reference
 

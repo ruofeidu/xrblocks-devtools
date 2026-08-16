@@ -248,7 +248,7 @@ function collectTestRun(
     durationMs: test.diagnostic()?.duration ?? 0,
     primaryHand: meta.primaryHand,
     secondaryHand: meta.secondaryHand,
-    scenario: meta.scenario,
+    scene: meta.scene,
     realTime: meta.realTime,
     video: meta.video,
     videoTimeline: meta.videoTimeline,

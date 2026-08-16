@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {mkdir, rename, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import type {BrowserDiagnostics, PhysicalHand} from '../session/index.js';
+import type {SceneVariant} from './authoring.js';
 
 export type TestStatus = 'passed' | 'failed' | 'blocked';
 
@@ -11,7 +12,7 @@ export interface TestRunResult {
   durationMs: number;
   primaryHand?: PhysicalHand;
   secondaryHand?: PhysicalHand;
-  scenario?: string;
+  scene?: SceneVariant;
   realTime?: boolean;
   video?: string;
   videoTimeline?: string;

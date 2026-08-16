@@ -1,7 +1,19 @@
-import {it_session} from '@xrblocks/devtools/test';
+import {XRBlocksSession} from '@xrblocks/devtools';
+import {afterAll, expect, it_session, vi} from '@xrblocks/devtools/test';
+
+const invoke = vi.fn().mockResolvedValue({loaded: true});
+const open = vi.spyOn(XRBlocksSession, 'open').mockResolvedValue({
+  close: async () => {},
+  diagnostics: [],
+  invoke,
+});
+
+afterAll(() => open.mockRestore());
 
 it_session(
-  'loads a scene',
-  {scenarios: ['./scenes/table.json']},
-  async () => {}
+  'loads scenes',
+  {scenes: ['Office', {path: './scenes/table.json'}]},
+  async (_session, run) => {
+    expect(run.scene).toBeDefined();
+  }
 );

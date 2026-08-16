@@ -98,13 +98,17 @@ test('provides the selected judge model to the test process', async (t) => {
   assert.equal(result.passedTests, 1);
 });
 
-test('reports unsupported scenarios as a test runner error', async (t) => {
+test('runs SDK and manifest scene variants', async (t) => {
   const {result} = await run(t, 'scenario.test.mjs');
 
-  assert.equal(result.status, 'invalid');
-  assert.equal(result.score, null);
+  assert.equal(result.status, 'valid');
+  assert.equal(result.score, 100);
+  assert.equal(result.totalTests, 2);
   assert.equal(result.tests[0].runs[0].realTime, false);
-  assert.match(result.errors[0].message, /Scenario manifests require/);
+  assert.deepEqual(
+    result.tests[0].runs.map((run) => run.scene),
+    ['Office', {path: './scenes/table.json'}]
+  );
 });
 
 async function run(t, fixture, app = {}, options = {}) {

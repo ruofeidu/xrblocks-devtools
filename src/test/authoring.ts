@@ -13,6 +13,7 @@ import {
   type TestOptions,
 } from 'vitest';
 import path from 'node:path';
+import type {SimulatorEnvironment} from 'xrblocks';
 import {XRBlocksSession, type PhysicalHand} from '../session/index.js';
 import {XRBlocksTestFailure} from './failure.js';
 import type {XRBlocksTestMeta} from './internal-types.js';
@@ -30,15 +31,18 @@ export interface XRBlocksTestOptions extends VitestOptions {
 
 export interface SessionTestOptions extends XRBlocksTestOptions {
   switchHands?: boolean;
-  scenarios?: string[];
+  scenes?: SceneVariant[];
   video?: string;
   realTime?: boolean;
 }
 
+export type BuiltInScene = NonNullable<SimulatorEnvironment['name']>;
+export type SceneVariant = BuiltInScene | {path: string};
+
 export interface SessionTestRun {
   primaryHand: PhysicalHand;
   secondaryHand: PhysicalHand;
-  scenario?: string;
+  scene?: SceneVariant;
 }
 
 export type SessionTestFunction = (
@@ -97,7 +101,7 @@ export function it_session(
   const plan = planSessionRuns(name, options);
   const {
     switchHands: _switchHands,
-    scenarios: _scenarios,
+    scenes: _scenes,
     video: _video,
     realTime: _realTime,
     ...sharedOptions
@@ -112,12 +116,12 @@ export function it_session(
       runId: run.id,
       primaryHand: run.primaryHand,
       secondaryHand: run.secondaryHand,
-      scenario: run.scenario,
+      scene: run.scene,
       realTime: options.realTime ?? false,
     };
 
     vitestIt(
-      `${name} [${run.primaryHand}, ${run.scenario ?? 'default'}]`,
+      `${name} [${run.primaryHand}, ${sceneLabel(run.scene)}]`,
       testOptions(
         {
           ...sharedOptions,
@@ -192,7 +196,7 @@ function planSessionRuns(
     throw new TypeError(`Session test ${name} switchHands must be a Boolean.`);
   const hands: PhysicalHand[] = switchHands ? ['right', 'left'] : ['right'];
 
-  const scenarios = normalizeScenarios(name, options.scenarios);
+  const scenes = normalizeScenes(name, options.scenes);
   validateVideoName(name, options.video);
   if (options.realTime !== undefined && typeof options.realTime !== 'boolean')
     throw new TypeError(`Session test ${name} realTime must be a Boolean.`);
@@ -200,15 +204,15 @@ function planSessionRuns(
   const runs: PlannedSessionRun[] = [];
 
   for (const primaryHand of hands) {
-    for (const [scenarioIndex, scenario] of scenarios.entries()) {
+    for (const [sceneIndex, scene] of scenes.entries()) {
       const suffixes = [];
       if (hands.length > 1) suffixes.push(primaryHand);
-      if (scenarios.length > 1) suffixes.push(`scenario-${scenarioIndex + 1}`);
+      if (scenes.length > 1) suffixes.push(`scene-${sceneIndex + 1}`);
       runs.push({
-        id: `${primaryHand}:${scenario ?? 'default'}`,
+        id: `${primaryHand}:${sceneLabel(scene)}`,
         primaryHand,
         secondaryHand: primaryHand === 'right' ? 'left' : 'right',
-        scenario,
+        scene,
         videoSuffix: suffixes.length > 0 ? `-${suffixes.join('-')}` : '',
       });
     }
@@ -217,22 +221,29 @@ function planSessionRuns(
   return {logicalId: logicalId(), required, runs};
 }
 
-function normalizeScenarios(
+function normalizeScenes(
   name: string,
-  scenarios: string[] | undefined
-): (string | undefined)[] {
-  if (scenarios === undefined || scenarios.length === 0) return [undefined];
+  scenes: SceneVariant[] | undefined
+): (SceneVariant | undefined)[] {
+  if (scenes === undefined || scenes.length === 0) return [undefined];
   const seen = new Set<string>();
-  for (const scenario of scenarios) {
-    if (typeof scenario !== 'string' || scenario.trim().length === 0)
+  for (const scene of scenes) {
+    if (
+      (typeof scene !== 'string' || scene.trim().length === 0) &&
+      (!scene ||
+        typeof scene !== 'object' ||
+        typeof scene.path !== 'string' ||
+        scene.path.trim().length === 0)
+    )
       throw new TypeError(
-        `Session test ${name} scenarios must be non-empty paths.`
+        `Session test ${name} scenes must be SDK environment names or {path: string}.`
       );
-    if (seen.has(scenario))
-      throw new TypeError(`Session test ${name} repeats scenario ${scenario}.`);
-    seen.add(scenario);
+    const label = sceneLabel(scene);
+    if (seen.has(label))
+      throw new TypeError(`Session test ${name} repeats scene ${label}.`);
+    seen.add(label);
   }
-  return scenarios;
+  return scenes;
 }
 
 async function runSessionTest(
@@ -243,14 +254,6 @@ async function runSessionTest(
   videoName: string | undefined,
   realTime: boolean
 ): Promise<void> {
-  if (run.scenario) {
-    throw new XRBlocksTestFailure(
-      'verifier',
-      'session',
-      'Scenario manifests require XR Blocks Devtools environment-loading support, which is not available yet.'
-    );
-  }
-
   const provided = inject('xrblocksTest');
   const videoStem = videoName ? `${videoName}${run.videoSuffix}` : undefined;
   const videoOut = videoStem
@@ -286,6 +289,21 @@ async function runSessionTest(
     );
   }
 
+  if (run.scene) {
+    try {
+      await session.invoke('setSimulatorEnvironment', run.scene);
+    } catch (error) {
+      await session.close().catch(() => undefined);
+      meta.diagnostics = session.diagnostics;
+      throw new XRBlocksTestFailure(
+        'candidate',
+        'session',
+        `Scene ${sceneLabel(run.scene)} did not load: ${errorMessage(error)}`,
+        {cause: error}
+      );
+    }
+  }
+
   let callbackError: unknown;
   try {
     await callback(
@@ -293,7 +311,7 @@ async function runSessionTest(
       {
         primaryHand: run.primaryHand,
         secondaryHand: run.secondaryHand,
-        scenario: run.scenario,
+        scene: run.scene,
       },
       context
     );
@@ -328,6 +346,11 @@ async function runSessionTest(
   }
 
   if (callbackError !== undefined) throw callbackError;
+}
+
+function sceneLabel(scene: SceneVariant | undefined): string {
+  if (scene === undefined) return 'default';
+  return typeof scene === 'string' ? scene : scene.path;
 }
 
 function testOptions(
