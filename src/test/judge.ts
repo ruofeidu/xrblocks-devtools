@@ -5,6 +5,7 @@ import {
   type Ai,
   type AiPart,
 } from '../ai.js';
+import {VerifierError} from './failure.js';
 
 const JUDGE_SYSTEM_INSTRUCTION = `You are an impartial test judge.
 Evaluate only the supplied evidence against the user's evaluation request.
@@ -33,20 +34,11 @@ export interface JudgeOptions {
   signal?: AbortSignal;
 }
 
-export type JudgeResult<T> =
-  | {status: 'completed'; output: T}
-  | {
-      status: 'skipped';
-      reason: 'missing-api-key' | 'missing-package';
-    };
-
 type JudgeDependencies = {
   createAi?: () => Promise<Ai>;
 };
 
-export async function judge<T = unknown>(
-  options: JudgeOptions
-): Promise<JudgeResult<T>> {
+export async function judge<T = unknown>(options: JudgeOptions): Promise<T> {
   return judgeWithDependencies<T>(options);
 }
 
@@ -54,26 +46,26 @@ export async function judge<T = unknown>(
 export async function judgeWithDependencies<T = unknown>(
   options: JudgeOptions,
   dependencies: JudgeDependencies = {}
-): Promise<JudgeResult<T>> {
-  let ai: Ai;
+): Promise<T> {
   try {
-    ai = await (dependencies.createAi ?? createAi)();
+    const ai = await (dependencies.createAi ?? createAi)();
+    return await ai.generateJson<T>({
+      operation: 'judge',
+      model: resolveJudgeModel(options.model),
+      systemInstruction: JUDGE_SYSTEM_INSTRUCTION,
+      parts: judgeParts(options),
+      schema: options.schema,
+      timeoutMs: options.timeoutMs,
+      signal: options.signal,
+    });
   } catch (error) {
-    if (error instanceof AiUnavailableError)
-      return {status: 'skipped', reason: error.reason};
-    throw error;
+    if (error instanceof VerifierError) throw error;
+    const message =
+      error instanceof AiUnavailableError
+        ? error.message
+        : 'Judge request failed.';
+    throw new VerifierError(message, {cause: error});
   }
-
-  const output = await ai.generateJson<T>({
-    operation: 'judge',
-    model: resolveJudgeModel(options.model),
-    systemInstruction: JUDGE_SYSTEM_INSTRUCTION,
-    parts: judgeParts(options),
-    schema: options.schema,
-    timeoutMs: options.timeoutMs,
-    signal: options.signal,
-  });
-  return {status: 'completed', output};
 }
 
 /** @internal */

@@ -229,14 +229,7 @@ function collectTestRun(
   for (const error of errors) {
     const classification = classifyError(error);
     if (classification?.kind === 'verifier') {
-      invalidate(
-        evaluation,
-        toError(
-          error,
-          'verifier',
-          classification.phase === 'cleanup' ? 'cleanup' : 'session'
-        )
-      );
+      invalidate(evaluation, toError(error, 'verifier', classification.phase));
     } else if (classification?.phase === 'session') {
       evaluation.errors.push(toError(error, 'candidate', 'session'));
     }

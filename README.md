@@ -279,13 +279,13 @@ const result = await judge<{passes: boolean; reason: string}>({
   },
 });
 
-if (result.status === 'completed') expect(result.output.passes).toBe(true);
+expect(result.passes, result.reason).toBe(true);
 ```
 
 The judge uses an internal system instruction and deterministic Gemini output.
-It returns `skipped` without failing the test when `GEMINI_API_KEY` or the
-optional `@google/genai` package is missing. Other request and response errors
-fail normally.
+Missing dependencies, missing or invalid credentials, and request failures throw
+`VerifierError`. The test runner reports these as verifier errors and does not
+score the candidate.
 
 Run one test file against one prepared application:
 

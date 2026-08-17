@@ -1,10 +1,10 @@
 export {runTests, type AppBinding, type RunTestsOptions} from './run-tests.js';
+export {VerifierError} from './failure.js';
 export {
   judge,
   type JudgeImageInput,
   type JudgeInput,
   type JudgeOptions,
-  type JudgeResult,
 } from './judge.js';
 export {
   afterAll,
