@@ -8,6 +8,7 @@ import {normalizePreviewInput} from './input.js';
 import {resolvePreviewRuntime} from './runtime.js';
 import type {VisualizeRequest, VisualizeResult} from './types.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
+import {getChromiumLaunchArgs} from '../browser.js';
 import {symlinkDir} from '../fs-utils.js';
 import {serveDirectory, type RunningServer} from '../server.js';
 
@@ -81,7 +82,10 @@ export async function visualize(
     options.signal?.throwIfAborted();
     server = await serveDirectory(tempDir);
     options.signal?.throwIfAborted();
-    browser = await chromium.launch({headless: true, args: ['--enable-gpu']});
+    browser = await chromium.launch({
+      headless: true,
+      args: getChromiumLaunchArgs(),
+    });
     options.signal?.throwIfAborted();
     page = await browser.newPage({viewport: size});
     const browserErrors: string[] = [];

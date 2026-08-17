@@ -14,6 +14,7 @@ import {
 import type {AudioInjectionResult} from './audio.js';
 import {injectedAudioSource, injectedHarnessSource} from './injected-source.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
+import {getChromiumLaunchArgs} from '../browser.js';
 
 export const DEFAULT_EMBODIED_CONTROL_IMPORT =
   'xrblocks/addons/embodied-control/index.js';
@@ -63,7 +64,7 @@ export class PlaywrightSessionAdapter {
       signal?.throwIfAborted();
       this.browser = await chromium.launch({
         headless: this.options.headless ?? true,
-        args: ['--enable-gpu'],
+        args: getChromiumLaunchArgs(),
       });
       signal?.throwIfAborted();
       const contextOptions: Parameters<Browser['newContext']>[0] = {
