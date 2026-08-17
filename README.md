@@ -438,14 +438,50 @@ URL sessions bypass workspace injection. Their page must expose XR Blocks debug
 state through `?xrAutomation=1&debug=1` and resolve the embodied-control addon.
 Set `embodiedControlImport` to a browser-loadable URL when needed.
 
-Application objects can declare stable metadata without changing other
-`userData`:
+### Developer metadata (tags and state)
+
+Application objects can declare stable metadata, custom tags, and state without changing other `userData`:
 
 ```js
 object.userData.xrblocksDevtools = {
   tag: 'start-button',
-  state: {enabled: true},
+  state: {
+    enabled: true,
+    // Dynamic state / function calls are evaluated as getters when inspected:
+    get score() {
+      return calculateScore();
+    },
+  },
 };
+```
+
+Devtools reads only `userData.xrblocksDevtools`. `state` must contain finite, cycle-free JSON data (dynamic state functions should be declared as getters rather than raw function values).
+
+You can query tagged objects and grab their evaluated state:
+
+```ts
+// Find objects by tag
+const items = await session.objects.findByTag('start-button');
+
+// Inspect a single object and read its evaluated state
+const inspection = await session.objects.inspect({tag: 'start-button'});
+console.log(inspection.state); // { enabled: true, score: 42 }
+
+// Grab all tags, states, spatial, and view data across the scene
+const context = await session.getDevtoolsContext({
+  tags: true,
+  state: true,
+  spatial: true,
+  view: true,
+});
+```
+
+Tagged objects can also be passed directly as targets to embodied actions:
+
+```ts
+await session.lookAtTarget({tag: 'start-button'});
+await session.pointTo('right', {tag: 'start-button'});
+await session.reachTo('right', {tag: 'start-button'});
 ```
 
 `session.act()` is an optional programmatic action loop. It requires
