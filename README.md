@@ -216,6 +216,11 @@ directory. Existing shell variables take priority. Set `GEMINI_API_KEY` there
 for AI features. Only `agent` requires the key before opening Chromium;
 `interact` can start without it.
 
+Set `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container` when running in Docker or
+containerized CI environments. This launches Chromium with container-friendly
+flags including `--no-sandbox`, `--disable-setuid-sandbox`,
+`--disable-dev-shm-usage`, and `--ignore-gpu-blocklist`.
+
 ### Test
 
 Write ordinary and session tests with the package test export:
