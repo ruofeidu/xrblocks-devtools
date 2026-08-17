@@ -64,6 +64,13 @@ describe('interactive REPL interface', () => {
 function fakeSession(overrides: Partial<XRBlocksSession>) {
   return Object.assign(Object.create(XRBlocksSession.prototype), {
     objects: {findByTag: vi.fn(), inspect: vi.fn()},
+    simulator: {
+      addObjects: vi.fn(),
+      updateObjects: vi.fn(),
+      removeObjects: vi.fn(),
+      clearObjects: vi.fn(),
+      getObjects: vi.fn(),
+    },
     ...overrides,
   }) as XRBlocksSession;
 }

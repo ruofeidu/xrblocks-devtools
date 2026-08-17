@@ -331,20 +331,25 @@ meters, or `{tag: 'name'}`. `left` and `right` select physical hands.
 
 ### Observe and save evidence
 
-| Function                         | Result or effect                                                                                              |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `getCamera(options?)`            | Camera world position in meters and `[x,y,z,w]` quaternion. `{screenshot: true}` also returns a PNG data URL. |
-| `getHands()`                     | Left and right hand position in meters, `[x,y,z,w]` quaternion, visibility, selection, and squeeze state.     |
-| `getScreenshot(options?)`        | PNG data URL. `overlayOnCamera` defaults to true.                                                             |
-| `saveScreenshot(path, options?)` | Save a PNG and return its absolute `{out}` path.                                                              |
-| `getSceneContext(options)`       | Select `semanticTree`, `visibleObjects`, and/or `setOfMark`. At least one must be true.                       |
-| `saveSetOfMark(path)`            | Capture Set-of-Mark, save its image, and return mark metadata plus `out`.                                     |
-| `getDevtoolsContext(options)`    | Select developer `tags`, declared `state`, `spatial`, and/or `view` measurements.                             |
-| `getSimulatorState()`            | Timestamp, running state, and pause state.                                                                    |
-| `inspectScene()`                 | Serializable scene hierarchy, camera, simulator, and world data.                                              |
-| `findByTag(tag)`                 | All identities with an exact Devtools tag.                                                                    |
-| `inspect(target)`                | Identity, metadata, visibility, hierarchy, and local/world transforms.                                        |
-| `diagnostics()`                  | Browser console, page, and failed-network-request entries.                                                    |
+| Function                          | Result or effect                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `getCamera(options?)`             | Camera world position in meters and `[x,y,z,w]` quaternion. `{screenshot: true}` also returns a PNG data URL. |
+| `getHands()`                      | Left and right hand position in meters, `[x,y,z,w]` quaternion, visibility, selection, and squeeze state.     |
+| `getScreenshot(options?)`         | PNG data URL. `overlayOnCamera` defaults to true.                                                             |
+| `saveScreenshot(path, options?)`  | Save a PNG and return its absolute `{out}` path.                                                              |
+| `getSceneContext(options)`        | Select `semanticTree`, `visibleObjects`, and/or `setOfMark`. At least one must be true.                       |
+| `saveSetOfMark(path)`             | Capture Set-of-Mark, save its image, and return mark metadata plus `out`.                                     |
+| `getDevtoolsContext(options)`     | Select developer `tags`, declared `state`, `spatial`, and/or `view` measurements.                             |
+| `getSimulatorState()`             | Timestamp, running state, and pause state.                                                                    |
+| `inspectScene()`                  | Serializable scene hierarchy, camera, simulator, and world data.                                              |
+| `findByTag(tag)`                  | All identities with an exact Devtools tag.                                                                    |
+| `inspect(target)`                 | Identity, metadata, visibility, hierarchy, and local/world transforms.                                        |
+| `addSimulatorObjects(defs)`       | Spawn simulator objects from local files, asset URLs, or Three.js meshes.                                     |
+| `updateSimulatorObjects(updates)` | Update transform, visibility, label, or physics for active simulator objects.                                 |
+| `removeSimulatorObjects(ids)`     | Remove simulator objects by ID.                                                                               |
+| `clearSimulatorObjects()`         | Remove all simulator objects from the environment.                                                            |
+| `getSimulatorObjects(ids?)`       | Retrieve simulator object records.                                                                            |
+| `diagnostics()`                   | Browser console, page, and failed-network-request entries.                                                    |
 
 ### Move and interact
 
@@ -482,6 +487,67 @@ Tagged objects can also be passed directly as targets to embodied actions:
 await session.lookAtTarget({tag: 'start-button'});
 await session.pointTo('right', {tag: 'start-button'});
 await session.reachTo('right', {tag: 'start-button'});
+```
+
+### Simulator objects (spawning and environment)
+
+Simulator objects are intended to simulate physical objects in the environment (such as furniture, physical props, obstacles, or real-world items). Devtools can dynamically spawn, update, and manage these objects in the XR Blocks simulator environment using `session.simulator`.
+
+Objects configured with `detectObject: true` and a `label` are directly read into the XR Blocks `objects` module, allowing apps to run object detection simulations against spawned physical items.
+
+Objects support:
+
+1. **Local filesystem 3D models**: `file: './tests/fixtures/model.glb'` (automatically read into data URLs).
+2. **Application or remote assets**: `assetPath: './models/chair.glb'` or `https://...`.
+3. **Direct Three.js objects** (in-browser): `object: myObject3D`.
+
+Spawned objects can declare Devtools tags, states, semantic detection labels, and physics:
+
+```ts
+// Spawn simulator objects dynamically
+const [table] = await session.simulator.addObjects([
+  {
+    id: 'fixture-table',
+    tag: 'fixture-table',
+    file: './tests/fixtures/table.glb',
+    position: [0, 0.8, -1.0],
+    physics: 'fixed',
+    detectObject: true,
+    label: 'Table',
+  },
+  {
+    id: 'ball-1',
+    tag: 'target-ball',
+    assetPath: './assets/ball.glb',
+    state: {score: 10},
+    position: [0, 1.2, -1.0],
+    physics: 'dynamic',
+  },
+]);
+
+// Target or inspect the spawned object immediately
+await session.lookAtTarget({tag: 'target-ball'});
+await session.reachTo('right', {tag: 'target-ball'});
+const inspection = await session.objects.inspect({tag: 'target-ball'});
+
+// Update, query, or remove simulator objects
+await session.simulator.updateObjects([
+  {id: 'ball-1', position: [0.5, 1.2, -1.0]},
+]);
+const records = await session.simulator.getObjects();
+await session.simulator.removeObjects(['ball-1']);
+await session.simulator.clearObjects();
+```
+
+Initial simulator objects can also be declared in `XRBlocksSessionConfig` or `it_session` options:
+
+```ts
+const session = await XRBlocksSession.open({
+  appDir: './app',
+  simulatorObjects: [
+    {tag: 'workbench', file: './fixtures/workbench.glb', physics: 'fixed'},
+  ],
+});
 ```
 
 `session.act()` is an optional programmatic action loop. It requires

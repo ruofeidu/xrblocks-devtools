@@ -20,11 +20,16 @@ import {
   type ObjectIdentity,
   type ObjectInspection,
   type SceneContextOptions,
+  type SessionSimulator,
+  type SimulatorObjectInput,
+  type SimulatorObjectRecord,
+  type SimulatorObjectUpdate,
   type Viewport,
 } from './types.js';
 import type {JsonObject} from '../types.js';
 import {runCleanupStep, throwCleanupErrors} from '../cleanup.js';
 import type {AudioInjection, AudioInjectionResult} from './audio.js';
+import {materializeSimulatorObjectInputs} from './simulator-objects.js';
 import {
   productionSessionDependencies,
   type SessionDependencies,
@@ -66,6 +71,8 @@ export type XRBlocksSessionConfig = XRBlocksSessionTarget & {
   simulatorReachLimit?: boolean;
   /** Load and enforce the active simulator environment navmesh. */
   simulatorNavMesh?: boolean;
+  /** Initial simulator objects to spawn on session start. */
+  simulatorObjects?: SimulatorObjectInput[];
   /** Module specifier or URL that the target page can load. */
   embodiedControlImport?: string;
   recordVideo?: SessionVideoRecordingOptions;
@@ -94,6 +101,7 @@ export type SimulatorNavigationResult = {
 export class XRBlocksSession {
   readonly config: XRBlocksSessionConfig;
   readonly objects: SessionObjects;
+  readonly simulator: SessionSimulator;
   info?: XRBlocksSessionInfo;
   videoTimeline?: VideoTimeline;
   private workspace?: MaterializedAppWorkspace;
@@ -127,6 +135,32 @@ export class XRBlocksSession {
         this.requireRuntime().invoke<ObjectInspection>('inspectObject', {
           target,
         }),
+    };
+    this.simulator = {
+      addObjects: async (definitions: SimulatorObjectInput[]) => {
+        const materialized =
+          await materializeSimulatorObjectInputs(definitions);
+        return this.requireRuntime().invoke<SimulatorObjectRecord[]>(
+          'addSimulatorObjects',
+          materialized
+        );
+      },
+      updateObjects: (updates: SimulatorObjectUpdate[]) =>
+        this.requireRuntime().invoke<SimulatorObjectRecord[]>(
+          'updateSimulatorObjects',
+          updates
+        ),
+      removeObjects: async (ids: string[]) => {
+        await this.requireRuntime().invoke('removeSimulatorObjects', ids);
+      },
+      clearObjects: async () => {
+        await this.requireRuntime().invoke('clearSimulatorObjects');
+      },
+      getObjects: (ids?: string[]) =>
+        this.requireRuntime().invoke<SimulatorObjectRecord[]>(
+          'getSimulatorObjects',
+          ids
+        ),
     };
   }
 
@@ -207,6 +241,9 @@ export class XRBlocksSession {
       const initResult = await this.runtime.open();
       signal?.throwIfAborted();
       this.started = true;
+      if (this.config.simulatorObjects?.length) {
+        await this.simulator.addObjects(this.config.simulatorObjects);
+      }
       this.info = {url: targetUrl, appDir, initResult};
       return this.info;
     } catch (error) {

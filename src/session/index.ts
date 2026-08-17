@@ -21,6 +21,11 @@ export type {
   ObjectTransform,
   PhysicalHand,
   QuaternionTuple,
+  SessionSimulator,
+  SimulatorObjectInput,
+  SimulatorObjectRecord,
+  SimulatorObjectUpdate,
+  SimulatorPhysicsMode,
   Vec3Tuple,
 } from './types.js';
 export type {AudioInjection, AudioInjectionResult} from './audio.js';

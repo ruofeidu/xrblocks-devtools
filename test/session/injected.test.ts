@@ -5,6 +5,7 @@ import {describe, expect, it, vi} from 'vitest';
 import {injectedHarnessSource} from '../../src/session/injected-source.js';
 
 type InjectedWindow = {
+  THREE?: typeof THREE;
   xb?: {core: unknown};
   xbReady?: Promise<void>;
   __xrblocksDevtoolsRuntime?: {
@@ -22,6 +23,15 @@ type InjectedWindow = {
     };
     navigateTo(target: [number, number, number]): Promise<unknown>;
     init(options?: object): Promise<unknown>;
+    addSimulatorObjects(
+      definitions: object[]
+    ): Promise<Array<Record<string, unknown>>>;
+    updateSimulatorObjects(
+      updates: object[]
+    ): Promise<Array<Record<string, unknown>>>;
+    removeSimulatorObjects(ids: string[]): {completed: boolean};
+    clearSimulatorObjects(): {completed: boolean};
+    getSimulatorObjects(ids?: string[]): Array<Record<string, unknown>>;
   };
 };
 
@@ -32,6 +42,7 @@ async function installHarness(window: InjectedWindow) {
     performance,
     setTimeout,
     clearTimeout,
+    THREE,
   });
   return window.__xrblocksDevtoolsRuntime!;
 }
@@ -160,5 +171,98 @@ describe('injected Devtools runtime', () => {
 
     expect(simulator.options).toEqual({navMesh: {enabled: true}});
     expect(setEnvironment).toHaveBeenCalledWith('/room.json');
+  });
+
+  it('manages simulator objects and attaches Devtools tags and state', async () => {
+    const scene = new THREE.Scene();
+    const records = new Map<
+      string,
+      {id: string; object: THREE.Object3D; definition: Record<string, unknown>}
+    >();
+    const mockObjectsManager = {
+      async addObjects(definitions: Array<Record<string, unknown>>) {
+        return definitions.map((def, idx) => {
+          const id = (def.id as string) || `obj-${idx + 1}`;
+          const obj =
+            (def.object as THREE.Object3D) ||
+            new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+          obj.name = id;
+          if (Array.isArray(def.position)) {
+            obj.position.fromArray(def.position as [number, number, number]);
+          }
+          const record = {id, object: obj, definition: def};
+          records.set(id, record);
+          scene.add(obj);
+          return record;
+        });
+      },
+      async updateObjects(
+        updates: Array<{id: string; position?: [number, number, number]}>
+      ) {
+        return updates.map((u) => {
+          const record = records.get(u.id);
+          if (record && u.position)
+            record.object.position.fromArray(u.position);
+          return record!;
+        });
+      },
+      removeObjects(ids: string[]) {
+        for (const id of ids) {
+          const record = records.get(id);
+          if (record) {
+            scene.remove(record.object);
+            records.delete(id);
+          }
+        }
+      },
+      clear() {
+        for (const record of records.values()) {
+          scene.remove(record.object);
+        }
+        records.clear();
+      },
+      get(ids?: string[]) {
+        if (!ids) return Array.from(records.values());
+        return ids.map((id) => records.get(id)).filter(Boolean);
+      },
+    };
+
+    const window = testWindow(scene);
+    (
+      window.xb!.core as {simulator: Record<string, unknown>}
+    ).simulator.objects = mockObjectsManager;
+    window.THREE = THREE;
+    const runtime = await installHarness(window);
+
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const added = await runtime.addSimulatorObjects([
+      {
+        id: 'box-1',
+        object: mesh,
+        tag: 'target-box',
+        state: {hit: false},
+        position: [1, 2, 3],
+      },
+    ]);
+
+    expect(added).toEqual([
+      expect.objectContaining({
+        id: 'box-1',
+        tag: 'target-box',
+        position: [1, 2, 3],
+      }),
+    ]);
+
+    expect(runtime.findObjectsByTag('target-box')).toHaveLength(1);
+
+    const updated = await runtime.updateSimulatorObjects([
+      {id: 'box-1', position: [4, 5, 6]},
+    ]);
+    expect(updated[0].position).toEqual([4, 5, 6]);
+
+    expect(runtime.getSimulatorObjects(['box-1'])).toHaveLength(1);
+
+    runtime.removeSimulatorObjects(['box-1']);
+    expect(runtime.getSimulatorObjects()).toHaveLength(0);
   });
 });

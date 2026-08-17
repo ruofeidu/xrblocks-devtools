@@ -205,6 +205,48 @@ describe('Session interface', () => {
     ).toThrow('Unknown hand-pose joint');
     await session.close();
   });
+
+  it('manages simulator objects through session.simulator', async () => {
+    const invoke = vi.fn().mockResolvedValue([{id: 'obj-1'}]);
+    const session = new XRBlocksSession(
+      {
+        url: 'http://example.test',
+        simulatorObjects: [{assetPath: './models/box.glb', tag: 'init-box'}],
+      },
+      fakeDependencies({runtime: fakeRuntime({invoke})})
+    );
+    await session.start();
+
+    expect(invoke).toHaveBeenCalledWith('addSimulatorObjects', [
+      expect.objectContaining({assetPath: './models/box.glb', tag: 'init-box'}),
+    ]);
+
+    await session.simulator.addObjects([
+      {assetPath: './models/sphere.glb', tag: 'sphere-1'},
+    ]);
+    expect(invoke).toHaveBeenCalledWith('addSimulatorObjects', [
+      expect.objectContaining({
+        assetPath: './models/sphere.glb',
+        tag: 'sphere-1',
+      }),
+    ]);
+
+    await session.simulator.updateObjects([{id: 'obj-1', position: [1, 2, 3]}]);
+    expect(invoke).toHaveBeenCalledWith('updateSimulatorObjects', [
+      {id: 'obj-1', position: [1, 2, 3]},
+    ]);
+
+    await session.simulator.removeObjects(['obj-1']);
+    expect(invoke).toHaveBeenCalledWith('removeSimulatorObjects', ['obj-1']);
+
+    await session.simulator.clearObjects();
+    expect(invoke).toHaveBeenCalledWith('clearSimulatorObjects');
+
+    await session.simulator.getObjects(['obj-1']);
+    expect(invoke).toHaveBeenCalledWith('getSimulatorObjects', ['obj-1']);
+
+    await session.close();
+  });
 });
 
 function fakeRuntime(

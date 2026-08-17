@@ -45,6 +45,21 @@ inspect({tag: 'start-button'});
 getDevtoolsContext({tags: true, state: true, spatial: true, view: true});
 ```
 
+You can also dynamically spawn objects into the simulator environment with Devtools tags and state. Objects configured with `detectObject: true` and `label` are automatically read into the XR Blocks `objects` module for object detection simulations:
+
+```js
+addSimulatorObjects([
+  {
+    tag: 'target-ball',
+    assetPath: './assets/ball.glb',
+    detectObject: true,
+    label: 'Ball',
+    position: [0, 1.2, -1],
+    physics: 'dynamic',
+  },
+]);
+```
+
 `spatial` contains world pose and renderable bounds in meters. `view` contains
 effective visibility, frustum membership, normalized screen bounds and
 coverage, and camera distances in meters.

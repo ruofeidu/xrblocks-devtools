@@ -18,6 +18,7 @@ import {
   DEFAULT_SESSION_TIMEOUT_MS,
   XRBlocksSession,
   type PhysicalHand,
+  type SimulatorObjectInput,
 } from '../session/index.js';
 import {XRBlocksTestFailure} from './failure.js';
 import type {XRBlocksTestMeta} from './internal-types.js';
@@ -38,6 +39,7 @@ export interface SessionTestOptions extends XRBlocksTestOptions {
   scenes?: SceneVariant[];
   video?: string;
   realTime?: boolean;
+  simulatorObjects?: SimulatorObjectInput[];
 }
 
 export type BuiltInScene = NonNullable<SimulatorEnvironment['name']>;
@@ -138,7 +140,8 @@ export function it_session(
           context,
           meta,
           options.video,
-          options.realTime ?? false
+          options.realTime ?? false,
+          options.simulatorObjects
         );
       }
     );
@@ -254,7 +257,8 @@ async function runSessionTest(
   context: TestContext,
   meta: XRBlocksTestMeta,
   videoName: string | undefined,
-  realTime: boolean
+  realTime: boolean,
+  simulatorObjects?: SimulatorObjectInput[]
 ): Promise<void> {
   const provided = inject('xrblocksTest');
   const videoStem = videoName ? `${videoName}${run.videoSuffix}` : undefined;
@@ -280,6 +284,7 @@ async function runSessionTest(
             }
           : undefined,
       timeoutMs: provided.sessionTimeoutMs,
+      simulatorObjects,
       signal: context.signal,
     });
   } catch (error) {

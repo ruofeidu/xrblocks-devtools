@@ -126,4 +126,58 @@ export type ObjectInspection = ObjectIdentity & {
   worldTransform: ObjectTransform;
 };
 
+export type SimulatorPhysicsMode = false | 'fixed' | 'dynamic';
+
+export type SimulatorObjectInput = {
+  id?: string;
+  tag?: string;
+  state?: JsonObject;
+  position?: Vec3Tuple;
+  quaternion?: QuaternionTuple;
+  scale?: Vec3Tuple;
+  visible?: boolean;
+  detectObject?: boolean;
+  label?: string;
+  physics?: SimulatorPhysicsMode;
+  data?: unknown;
+  assetPath?: string;
+  file?: string;
+  object?: unknown;
+};
+
+export type SimulatorObjectUpdate = {
+  id: string;
+  position?: Vec3Tuple;
+  quaternion?: QuaternionTuple;
+  scale?: Vec3Tuple;
+  visible?: boolean;
+  detectObject?: boolean;
+  label?: string | null;
+  physics?: SimulatorPhysicsMode;
+  data?: unknown;
+};
+
+export type SimulatorObjectRecord = {
+  id: string;
+  tag?: string;
+  label?: string;
+  position: Vec3Tuple;
+  quaternion: QuaternionTuple;
+  scale: Vec3Tuple;
+  visible: boolean;
+  physics?: SimulatorPhysicsMode;
+};
+
+export type SessionSimulator = {
+  addObjects(
+    definitions: SimulatorObjectInput[]
+  ): Promise<SimulatorObjectRecord[]>;
+  updateObjects(
+    updates: SimulatorObjectUpdate[]
+  ): Promise<SimulatorObjectRecord[]>;
+  removeObjects(ids: string[]): Promise<void>;
+  clearObjects(): Promise<void>;
+  getObjects(ids?: string[]): Promise<SimulatorObjectRecord[]>;
+};
+
 export type {AudioInjection, AudioInjectionResult} from './audio.js';

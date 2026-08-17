@@ -211,6 +211,87 @@ function getDevtoolsContext(options = {}) {
   return result;
 }
 
+function getSimulatorObjectsManager() {
+  const core = getCore();
+  const manager = core.simulator?.objects;
+  if (!manager || typeof manager.addObjects !== 'function') {
+    throw new Error('XR Blocks simulator objects manager is unavailable.');
+  }
+  return manager;
+}
+
+function serializeSimulatorObjectRecord(record) {
+  const object = record?.object;
+  const definition = record?.definition || {};
+  return {
+    id: record?.id,
+    tag: devtoolsMetadata(object)?.tag,
+    label: definition?.label,
+    position: tuple3(object?.position),
+    quaternion: tuple4(object?.quaternion),
+    scale: tuple3(object?.scale),
+    visible: object?.visible !== false,
+    physics: definition?.physics || false,
+  };
+}
+
+async function addSimulatorObjects(definitions = []) {
+  if (!Array.isArray(definitions) || definitions.length === 0) {
+    return [];
+  }
+  const manager = getSimulatorObjectsManager();
+  const records = await manager.addObjects(definitions, {
+    baseUrl: location.href,
+  });
+
+  for (let index = 0; index < records.length; index += 1) {
+    const record = records[index];
+    const def = definitions[index] || {};
+    const meta = {};
+    if (typeof def.tag === 'string') meta.tag = def.tag;
+    if (def.state && typeof def.state === 'object') meta.state = def.state;
+    if (meta.tag || meta.state) {
+      record.object.userData = record.object.userData || {};
+      record.object.userData[DEVTOOLS_METADATA_KEY] = {
+        ...(record.object.userData[DEVTOOLS_METADATA_KEY] || {}),
+        ...meta,
+      };
+    }
+  }
+
+  getCore().stepFrame?.();
+  await Promise.resolve();
+  return records.map(serializeSimulatorObjectRecord);
+}
+
+async function updateSimulatorObjects(updates = []) {
+  const manager = getSimulatorObjectsManager();
+  const records = await manager.updateObjects(updates);
+  getCore().stepFrame?.();
+  await Promise.resolve();
+  return records.map(serializeSimulatorObjectRecord);
+}
+
+function removeSimulatorObjects(ids = []) {
+  const manager = getSimulatorObjectsManager();
+  manager.removeObjects(ids);
+  getCore().stepFrame?.();
+  return {completed: true};
+}
+
+function clearSimulatorObjects() {
+  const manager = getSimulatorObjectsManager();
+  manager.clear();
+  getCore().stepFrame?.();
+  return {completed: true};
+}
+
+function getSimulatorObjects(ids) {
+  const manager = getSimulatorObjectsManager();
+  const records = manager.get(ids);
+  return records.map(serializeSimulatorObjectRecord);
+}
+
 const observations = {
   getCamera: observeCamera,
   getHands: observeHands,
@@ -232,6 +313,11 @@ window.__xrblocksDevtoolsRuntime = {
   findObjectsByTag,
   navigateTo,
   getDevtoolsContext,
+  addSimulatorObjects,
+  updateSimulatorObjects,
+  removeSimulatorObjects,
+  clearSimulatorObjects,
+  getSimulatorObjects,
   async observe(tool, args = {}) {
     const observation = observations[tool];
     if (!observation) {

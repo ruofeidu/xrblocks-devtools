@@ -48,6 +48,11 @@ const helperUsages = [
   'findByTag(tag)',
   'inspect(target)',
   'inspectScene()',
+  'addSimulatorObjects(definitions)',
+  'updateSimulatorObjects(updates)',
+  'removeSimulatorObjects(ids)',
+  'clearSimulatorObjects()',
+  'getSimulatorObjects(ids?)',
   'saveScreenshot(path, options?)',
   'saveSetOfMark(path)',
   'diagnostics()',
@@ -84,8 +89,14 @@ export function installInteractiveContext(
     server.context[name] = method.bind(session);
   }
   server.context.objects = session.objects;
-  server.context.findByTag = session.objects.findByTag;
-  server.context.inspect = session.objects.inspect;
+  server.context.findByTag = session.objects?.findByTag;
+  server.context.inspect = session.objects?.inspect;
+  server.context.simulator = session.simulator;
+  server.context.addSimulatorObjects = session.simulator?.addObjects;
+  server.context.updateSimulatorObjects = session.simulator?.updateObjects;
+  server.context.removeSimulatorObjects = session.simulator?.removeObjects;
+  server.context.clearSimulatorObjects = session.simulator?.clearObjects;
+  server.context.getSimulatorObjects = session.simulator?.getObjects;
   server.context.inspectScene = () => session.observe('inspectScene');
   server.context.diagnostics = () => session.diagnostics;
   server.context.saveScreenshot = async (
