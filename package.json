@@ -37,6 +37,8 @@
     "test:xrblocks-test": "npm run build && node --test test/xrblocks-test.node-test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "examples": "node scripts/serve-examples.mjs",
+    "preeval-test-agent": "npm run build --silent",
+    "eval-test-agent": "node scripts/eval-test-agent.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -28,6 +28,8 @@ import {
   type AgentActionOutcome,
 } from './agent-model.js';
 
+const DEFAULT_OBSERVATION_DELAY_MS = 500;
+
 export type ActEvent = JsonObject & {
   timestamp_ms: number;
   turn: number;
@@ -46,6 +48,8 @@ export type ActOptions = {
   model?: string;
   maxRetries?: number;
   timeoutMs?: number;
+  /** Time to let the app update before each post-action observation. */
+  observationDelayMs?: number;
   toolProfile?: AgentToolProfile;
   signal?: AbortSignal;
   onEvent?: (event: ActEvent) => void;
@@ -66,6 +70,7 @@ export type ActTrajectory = {
     maxTurns: number;
     maxRetries: number;
     timeoutMs: number;
+    observationDelayMs: number;
     toolProfile: AgentToolProfile;
     observations: AgentObservationKind[];
   };
@@ -114,6 +119,11 @@ export async function runSessionAct(
     0
   );
   const timeoutMs = aiTimeoutMs(options.timeoutMs);
+  const observationDelayMs = finiteOption(
+    options.observationDelayMs ?? DEFAULT_OBSERVATION_DELAY_MS,
+    'observationDelayMs',
+    0
+  );
   const toolProfile = options.toolProfile ?? 'targeted';
   const observationKinds = normalizeAgentObservations(options.context);
   const tools = createAgentTools(toolProfile);
@@ -142,6 +152,7 @@ export async function runSessionAct(
         maxTurns,
         maxRetries,
         timeoutMs,
+        observationDelayMs,
         toolProfile,
         observations: observationKinds,
       },
@@ -263,6 +274,7 @@ export async function runSessionAct(
         });
       }
 
+      if (observationDelayMs > 0) await session.wait(observationDelayMs);
       observation = await observe();
       recordObservation(observation, turn, record);
       messages.push(
@@ -314,6 +326,12 @@ function elapsedMs(clock: () => number, start: number) {
 function integerOption(value: number, name: string, minimum: number) {
   if (!Number.isSafeInteger(value) || value < minimum)
     throw new TypeError(`${name} must be an integer of at least ${minimum}.`);
+  return value;
+}
+
+function finiteOption(value: number, name: string, minimum: number) {
+  if (!Number.isFinite(value) || value < minimum)
+    throw new TypeError(`${name} must be at least ${minimum}.`);
   return value;
 }
 
