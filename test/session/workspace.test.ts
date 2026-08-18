@@ -29,10 +29,10 @@ describe('materializeAppWorkspace', () => {
     );
   });
 
-  it('points app imports at the unmodified XR Blocks SDK', async () => {
+  it('rewrites a nested XR Blocks app without rewriting vendor paths twice', async () => {
     const projectDir = await makeTempDir('xrblocks-workspace-');
     const xrblocksRoot = path.join(projectDir, 'xrblocks');
-    const appDir = path.join(projectDir, 'app');
+    const appDir = path.join(xrblocksRoot, 'samples', 'advanced', 'example');
     await mkdir(path.join(xrblocksRoot, 'build', 'addons'), {recursive: true});
     await mkdir(path.join(xrblocksRoot, 'node_modules', 'three', 'build'), {
       recursive: true,
@@ -57,6 +57,10 @@ describe('materializeAppWorkspace', () => {
       'export {};\n'
     );
     await writeFile(
+      path.join(xrblocksRoot, 'samples', 'main.css'),
+      'body {}\n'
+    );
+    await writeFile(
       path.join(
         xrblocksRoot,
         'node_modules',
@@ -69,7 +73,8 @@ describe('materializeAppWorkspace', () => {
     await writeFile(
       path.join(appDir, 'index.html'),
       `<!doctype html>
-<script type="importmap">{"imports":{"xrblocks":"../../xrblocks/build/xrblocks.js","xrblocks/addons/":"../../xrblocks/build/addons/"}}</script>`
+<link rel="stylesheet" href="../../main.css">
+<script type="importmap">{"imports":{"xrblocks":"../../../build/xrblocks.js","xrblocks/addons/":"../../../build/addons/"}}</script>`
     );
 
     const workspace = await materializeAppWorkspace({
@@ -87,6 +92,8 @@ describe('materializeAppWorkspace', () => {
       '"xrblocks/addons/": "./vendor/xrblocks/build/addons/"'
     );
     expect(html).toContain('"lit": "./vendor/node_modules/lit/index.js"');
+    expect(html).toContain('href="./vendor/xrblocks/samples/main.css"');
+    expect(html).not.toContain('/vendor/xrblocks/samples/advanced/example/');
     await expect(
       readlink(path.join(workspace.appDir, 'vendor', 'xrblocks'))
     ).resolves.toBe(xrblocksRoot);

@@ -134,8 +134,7 @@ function rewriteXrblocksHtmlReferences(
   sourceHtmlDir: string,
   runtime: RuntimeAssets
 ) {
-  const rewrittenImportMaps = rewriteXrblocksImportMapValues(html, runtime);
-  return rewrittenImportMaps.replace(
+  const rewrittenReferences = html.replace(
     /(["'])([^"']+)(\1)/g,
     (match, openQuote: string, importValue: string, closeQuote: string) => {
       const vendorValue = xrblocksVendorReferenceValue(
@@ -146,6 +145,7 @@ function rewriteXrblocksHtmlReferences(
       return vendorValue ? `${openQuote}${vendorValue}${closeQuote}` : match;
     }
   );
+  return rewriteXrblocksImportMapValues(rewrittenReferences, runtime);
 }
 
 function rewriteXrblocksImportMapValues(html: string, runtime: RuntimeAssets) {
