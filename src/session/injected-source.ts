@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 const injectedFiles = [
   'serialization.js',
   'xrblocks.js',
+  'rendering.js',
   'targets.js',
   'spatial.js',
   'context.js',

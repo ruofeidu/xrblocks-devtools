@@ -10,18 +10,7 @@ function getSceneContextDetector() {
 
 async function runOneShotContextDetection(options) {
   const detection = getSceneContextDetector().runContextDetection(options);
-  let frameTimer;
-  if (options.setOfMark) {
-    frameTimer = setTimeout(() => getCore().stepFrame?.(0), 0);
-  }
-
-  let result;
-  try {
-    result = await detection;
-  } finally {
-    clearTimeout(frameTimer);
-  }
-  return result;
+  return awaitWithRenderFrames(detection, 'Scene context');
 }
 
 async function getContextProduct(options, resultKey) {
