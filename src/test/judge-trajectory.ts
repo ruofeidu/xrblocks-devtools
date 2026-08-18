@@ -3,6 +3,7 @@ import {
   buildTrajectoryJudgePrompt,
   TRAJECTORY_JUDGE_SYSTEM_INSTRUCTION,
 } from '../agent-prompts.js';
+import {agentActionDeclarations} from '../session/actions.js';
 import {VerifierError} from './failure.js';
 import {
   judgeWithSystemInstruction,
@@ -15,6 +16,7 @@ const MAX_TIMELINE_EVENTS = 120;
 const MAX_VALUE_DEPTH = 4;
 const MAX_COLLECTION_ITEMS = 20;
 const MAX_STRING_LENGTH = 500;
+const MAX_EVENT_JSON_LENGTH = 4_000;
 
 const TRAJECTORY_VERDICT_SCHEMA = {
   type: 'object',
@@ -41,7 +43,10 @@ export interface TrajectoryVerdict {
   reason: string;
 }
 
-type JudgeFunction = <T = unknown>(options: JudgeOptions) => Promise<T>;
+type JudgeFunction = <T = unknown>(
+  options: JudgeOptions,
+  systemInstruction: string
+) => Promise<T>;
 
 type JudgeTrajectoryDependencies = {
   judge?: JudgeFunction;
@@ -66,7 +71,7 @@ export async function judgeTrajectoryWithDependencies(
   const evidence: JudgeEvidence[] = [
     {
       type: 'text',
-      label: 'Agent trajectory',
+      label: 'Ordered agent trajectory',
       text: summarizeTrajectory(options.trajectory.events),
     },
     ...trajectoryImageEvidence(options.trajectory.events),
@@ -86,12 +91,12 @@ export async function judgeTrajectoryWithDependencies(
       timeoutMs: options.timeoutMs,
       signal: options.signal,
     };
+    const systemInstruction = buildTrajectoryJudgeSystemInstruction(
+      options.trajectory.configuration.toolProfile
+    );
     const result = dependencies.judge
-      ? await dependencies.judge<unknown>(request)
-      : await judgeWithSystemInstruction<unknown>(
-          request,
-          TRAJECTORY_JUDGE_SYSTEM_INSTRUCTION
-        );
+      ? await dependencies.judge<unknown>(request, systemInstruction)
+      : await judgeWithSystemInstruction<unknown>(request, systemInstruction);
     if (!isTrajectoryVerdict(result))
       throw new VerifierError('Trajectory judge returned an invalid verdict.');
     return {verdict: result.verdict, reason: result.reason};
@@ -102,12 +107,10 @@ export async function judgeTrajectoryWithDependencies(
 }
 
 function summarizeTrajectory(events: readonly ActEvent[]) {
-  const lines = events
-    .filter((event) => event.type !== 'observation')
-    .map(summarizeEvent);
+  const lines = events.map(summarizeEvent);
   const bounded = boundTimeline(lines);
   return bounded.length === 0
-    ? 'No action, error, invalid-response, or exit events were recorded.'
+    ? 'No trajectory events were recorded.'
     : bounded.join('\n');
 }
 
@@ -116,6 +119,12 @@ function summarizeEvent(event: ActEvent) {
   const call = asObject(event.tool_call);
   const name = typeof call?.name === 'string' ? call.name : 'unknown';
   const args = call?.args;
+  if (event.type === 'observation') {
+    const result = asObject(event.result);
+    if (!result) return `${prefix}: observation ${boundedJson(event.result)}`;
+    const {images: _images, ...observation} = result;
+    return `${prefix}: observation ${boundedJson(observation)}`;
+  }
   if (event.type === 'action')
     return `${prefix}: action ${name} ${boundedJson(args)}`;
   if (event.type === 'action_error')
@@ -147,48 +156,183 @@ function boundTimeline(lines: readonly string[]) {
   ];
 }
 
+type TrajectoryImage = {
+  kind: 'image' | 'som' | 'unknown';
+  image: string;
+  mimeType?: string;
+};
+
+type ObservationFrame = {
+  eventIndex: number;
+  turn: number;
+  images: TrajectoryImage[];
+};
+
+type ActionTransition = {
+  turn: number;
+  name: string;
+  before: ObservationFrame;
+  after: ObservationFrame;
+};
+
 function trajectoryImageEvidence(events: readonly ActEvent[]): JudgeEvidence[] {
-  const candidates: Array<{
-    turn: number;
-    label: string;
-    image: string;
-    mimeType?: string;
-  }> = [];
-  for (const event of events) {
+  const frames: ObservationFrame[] = [];
+  for (const [eventIndex, event] of events.entries()) {
     if (event.type !== 'observation') continue;
-    const result = asObject(event.result);
-    if (!Array.isArray(result?.images)) continue;
-    for (const value of result.images) {
-      const image = asObject(value);
-      if (
-        typeof image?.dataUrl !== 'string' ||
-        image.dataUrl.trim().length === 0
-      )
-        continue;
-      candidates.push({
-        turn: event.turn,
-        label:
-          typeof image.label === 'string' && image.label.trim()
-            ? image.label
-            : 'observation',
-        image: image.dataUrl,
-        ...(typeof image.mimeType === 'string'
-          ? {mimeType: image.mimeType}
-          : {}),
-      });
-    }
+    const images = observationImages(event);
+    if (images.length > 0) frames.push({eventIndex, turn: event.turn, images});
+  }
+  if (frames.length === 0) return [];
+
+  const transitions = actionTransitions(events, frames);
+  const selectedFrames = selectEvidenceFrames(frames, transitions);
+  const contexts = transitionContexts(transitions);
+  const selectedImages: Array<{
+    frame: ObservationFrame;
+    image: TrajectoryImage;
+  }> = [];
+
+  for (const frame of selectedFrames) {
+    const image =
+      frame.images.find((candidate) => candidate.kind === 'image') ??
+      frame.images[0];
+    if (image) selectedImages.push({frame, image});
+  }
+  for (const frame of selectedFrames) {
+    if (selectedImages.length >= MAX_TRAJECTORY_IMAGES) break;
+    const primary = selectedImages.find((item) => item.frame === frame)?.image;
+    const secondary = frame.images.find((image) => image !== primary);
+    if (secondary) selectedImages.push({frame, image: secondary});
   }
 
-  return sampleEvenly(candidates, MAX_TRAJECTORY_IMAGES).map((image) => ({
-    type: 'image',
-    label: `Trajectory turn ${image.turn}: ${image.label}`,
-    image: image.image,
-    ...(image.mimeType ? {mimeType: image.mimeType} : {}),
-  }));
+  return selectedImages
+    .sort((left, right) => left.frame.eventIndex - right.frame.eventIndex)
+    .map(({frame, image}) => ({
+      type: 'image',
+      label: trajectoryImageLabel(frame, image, contexts.get(frame.eventIndex)),
+      image: image.image,
+      ...(image.mimeType ? {mimeType: image.mimeType} : {}),
+    }));
+}
+
+function observationImages(event: ActEvent): TrajectoryImage[] {
+  const candidates: TrajectoryImage[] = [];
+  const result = asObject(event.result);
+  if (!Array.isArray(result?.images)) return candidates;
+  for (const value of result.images) {
+    const image = asObject(value);
+    if (typeof image?.dataUrl !== 'string' || image.dataUrl.trim().length === 0)
+      continue;
+    candidates.push({
+      kind:
+        image.kind === 'image' || image.kind === 'som' ? image.kind : 'unknown',
+      image: image.dataUrl,
+      ...(typeof image.mimeType === 'string' ? {mimeType: image.mimeType} : {}),
+    });
+  }
+  return candidates;
+}
+
+function actionTransitions(
+  events: readonly ActEvent[],
+  frames: readonly ObservationFrame[]
+) {
+  const transitions: ActionTransition[] = [];
+  for (const [eventIndex, event] of events.entries()) {
+    if (event.type !== 'action') continue;
+    const before = [...frames]
+      .reverse()
+      .find((frame) => frame.eventIndex < eventIndex);
+    const after = frames.find((frame) => frame.eventIndex > eventIndex);
+    if (!before || !after) continue;
+    const call = asObject(event.tool_call);
+    transitions.push({
+      turn: event.turn,
+      name: typeof call?.name === 'string' ? call.name : 'unknown',
+      before,
+      after,
+    });
+  }
+  return transitions;
+}
+
+function selectEvidenceFrames(
+  frames: readonly ObservationFrame[],
+  transitions: readonly ActionTransition[]
+) {
+  const selected = new Map<number, ObservationFrame>();
+  const transitionLimit = Math.floor(MAX_TRAJECTORY_IMAGES / 2);
+  for (const transition of sampleEvenly(transitions, transitionLimit)) {
+    selected.set(transition.before.eventIndex, transition.before);
+    selected.set(transition.after.eventIndex, transition.after);
+  }
+  const remaining = frames.filter((frame) => !selected.has(frame.eventIndex));
+  for (const frame of sampleEvenly(
+    remaining,
+    MAX_TRAJECTORY_IMAGES - selected.size
+  ))
+    selected.set(frame.eventIndex, frame);
+  return [...selected.values()].sort(
+    (left, right) => left.eventIndex - right.eventIndex
+  );
+}
+
+function transitionContexts(transitions: readonly ActionTransition[]) {
+  const contexts = new Map<number, string[]>();
+  const add = (frame: ObservationFrame, context: string) => {
+    const values = contexts.get(frame.eventIndex) ?? [];
+    if (!values.includes(context)) values.push(context);
+    contexts.set(frame.eventIndex, values);
+  };
+  for (const transition of transitions) {
+    add(
+      transition.before,
+      `before turn ${transition.turn} action ${transition.name}`
+    );
+    add(
+      transition.after,
+      `after turn ${transition.turn} action ${transition.name}`
+    );
+  }
+  return contexts;
+}
+
+function trajectoryImageLabel(
+  frame: ObservationFrame,
+  image: TrajectoryImage,
+  contexts?: readonly string[]
+) {
+  const type =
+    image.kind === 'image'
+      ? 'raw image'
+      : image.kind === 'som'
+        ? 'Set-of-Mark image'
+        : 'image';
+  const relation = contexts?.length ? ` (${contexts.join('; ')})` : '';
+  return `Trajectory turn ${frame.turn} observation${relation}: ${type}`;
+}
+
+function buildTrajectoryJudgeSystemInstruction(
+  profile: ActTrajectory['configuration']['toolProfile']
+) {
+  const actions = agentActionDeclarations(profile)
+    .map(({name, description}) => `- ${name}: ${description}`)
+    .join('\n');
+  return `${TRAJECTORY_JUDGE_SYSTEM_INSTRUCTION}
+
+# Trusted action reference
+
+The following descriptions define the available actor actions for this trajectory. Use them only to interpret inputs and time order. A sequence of actions can compose one interaction. Do not require one specific action sequence when another sequence can produce the required observable outcome.
+
+${actions}
+
+Set-of-Mark labels are temporary visual annotations for one observation. The same label can identify a different object in another observation, and one object can receive different labels. Use stable node IDs, exact names, transforms, or corroborated visual changes when object identity matters.`;
 }
 
 function sampleEvenly<T>(values: readonly T[], limit: number): T[] {
+  if (limit <= 0 || values.length === 0) return [];
   if (values.length <= limit) return [...values];
+  if (limit === 1) return [values[values.length - 1]!];
   return Array.from({length: limit}, (_, index) => {
     const sourceIndex = Math.round((index * (values.length - 1)) / (limit - 1));
     return values[sourceIndex]!;
@@ -196,7 +340,11 @@ function sampleEvenly<T>(values: readonly T[], limit: number): T[] {
 }
 
 function boundedJson(value: unknown) {
-  return JSON.stringify(boundValue(value, 0));
+  const text = JSON.stringify(boundValue(value, 0));
+  if (text === undefined) return String(value);
+  return text.length <= MAX_EVENT_JSON_LENGTH
+    ? text
+    : `${text.slice(0, MAX_EVENT_JSON_LENGTH)}...[event truncated]`;
 }
 
 function boundValue(value: unknown, depth: number): unknown {

@@ -104,7 +104,7 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'move_hand',
     description:
-      'Move one hand relative to the current view direction without rotating it.',
+      'Move one hand relative to the current view direction without rotating it. While selection is held, this can provide movement for a direct or ray-based drag.',
     parameters: linearMotionSchema(HAND_MOVE_SPEED, true),
     execute: (session, args) =>
       session.moveHand(handArg(args), linearMotionArgs(args)),
@@ -112,7 +112,7 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'rotate_hand',
     description:
-      'Rotate one hand by relative YXZ Euler angles. Positive pitch is up, yaw is left, and roll is counterclockwise.',
+      'Rotate one hand and its pointing ray by relative YXZ Euler angles. Positive pitch is up, yaw is left, and roll is counterclockwise. While selection is held, this can provide angular movement for a ray-based drag.',
     parameters: rotationSchema(true),
     execute: (session, args) =>
       session.rotateHand(handArg(args), rotationArgs(args)),
@@ -177,7 +177,7 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'point_to_target',
     description:
-      'Aim the selected hand ray at a live context ID, unique scene name, Devtools tag, or world position without moving the hand.',
+      'Aim the selected hand ray at a live context ID, unique scene name, Devtools tag, or world position without moving the hand. Changing the aim while selection is held can provide ray-drag movement.',
     parameters: targetToolSchema(true, ANGULAR_SPEED, true),
     prompt:
       'point_to_target smoothly aims a hand ray at a context ID, named target, or tagged target at 90 degrees per second by default. Use it before click and while moving a ray-held object toward its destination.',
