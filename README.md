@@ -221,6 +221,10 @@ containerized CI environments. This launches Chromium with container-friendly
 flags including `--no-sandbox`, `--disable-setuid-sandbox`,
 `--disable-dev-shm-usage`, and `--ignore-gpu-blocklist`.
 
+Set `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container-software` when a container
+does not have a reliable GPU. This uses the same container flags and selects
+ANGLE with SwiftShader for deterministic software rendering.
+
 ### Test
 
 Write ordinary and session tests with the package test export:

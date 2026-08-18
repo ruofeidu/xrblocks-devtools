@@ -1,11 +1,13 @@
 /**
  * Returns Chromium launch flags based on the configured browser profile.
- * When `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container`, additional container-friendly
- * flags (such as `--disable-dev-shm-usage` and `--no-sandbox`) are included.
+ * Container profiles include flags such as `--disable-dev-shm-usage` and
+ * `--no-sandbox`. The `container-software` profile also selects SwiftShader.
  */
 export function getChromiumLaunchArgs(): string[] {
+  const browserProfile = process.env.XRBLOCKS_DEVTOOLS_BROWSER_PROFILE;
   const isContainer =
-    process.env.XRBLOCKS_DEVTOOLS_BROWSER_PROFILE === 'container';
+    browserProfile === 'container' || browserProfile === 'container-software';
+  const useSoftwareRendering = browserProfile === 'container-software';
 
   const baseFlags = [
     '--enable-gpu',
@@ -24,9 +26,17 @@ export function getChromiumLaunchArgs(): string[] {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--ignore-gpu-blocklist',
-      '--enable-gpu-rasterization',
-      '--enable-zero-copy',
+      ...(useSoftwareRendering
+        ? [
+            '--use-gl=angle',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-swiftshader',
+          ]
+        : [
+            '--ignore-gpu-blocklist',
+            '--enable-gpu-rasterization',
+            '--enable-zero-copy',
+          ]),
       ...baseFlags,
     ];
   }
