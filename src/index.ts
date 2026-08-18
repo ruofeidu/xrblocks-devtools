@@ -27,7 +27,16 @@ export type {
   NamedHandPose,
 } from './session/index.js';
 export type {BrowserDiagnostics} from './session/index.js';
-export type {ActEvent, ActExitPayload, ActOptions} from './agent.js';
+export type {
+  ActEvent,
+  ActExitPayload,
+  ActOptions,
+  ActResult,
+  ActStatus,
+  ActTrajectory,
+} from './agent.js';
+export type {ActArtifacts} from './agent-artifacts.js';
+export type {AgentToolProfile} from './session/actions.js';
 export {visualize} from './visualize/index.js';
 export type {
   ModelVisualizeRequest,

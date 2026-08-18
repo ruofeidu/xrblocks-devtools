@@ -1,5 +1,6 @@
 import type {BrowserDiagnostics, PhysicalHand} from '../session/index.js';
 import type {SceneVariant} from './authoring.js';
+import type {AgentRunArtifact} from './result.js';
 
 export interface XRBlocksTestMeta {
   schemaVersion: 1;
@@ -14,6 +15,7 @@ export interface XRBlocksTestMeta {
   realTime?: boolean;
   video?: string;
   videoTimeline?: string;
+  agentRuns?: AgentRunArtifact[];
   diagnostics?: BrowserDiagnostics;
 }
 

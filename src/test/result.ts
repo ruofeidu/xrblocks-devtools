@@ -2,9 +2,16 @@ import {randomUUID} from 'node:crypto';
 import {mkdir, rename, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import type {BrowserDiagnostics, PhysicalHand} from '../session/index.js';
+import type {ActStatus} from '../agent.js';
 import type {SceneVariant} from './authoring.js';
 
 export type TestStatus = 'passed' | 'failed' | 'blocked';
+
+export interface AgentRunArtifact {
+  status: ActStatus;
+  trajectory: string;
+  images: string[];
+}
 
 export interface TestRunResult {
   id: string;
@@ -16,6 +23,7 @@ export interface TestRunResult {
   realTime?: boolean;
   video?: string;
   videoTimeline?: string;
+  agentRuns?: AgentRunArtifact[];
   message?: string;
   diagnostics?: BrowserDiagnostics;
 }

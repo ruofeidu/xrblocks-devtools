@@ -13,7 +13,9 @@ import {
   type TestOptions,
 } from 'vitest';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import type {SimulatorEnvironment} from 'xrblocks';
+import {AiUnavailableError} from '../ai.js';
 import {
   DEFAULT_SESSION_TIMEOUT_MS,
   XRBlocksSession,
@@ -283,6 +285,26 @@ async function runSessionTest(
               fromSceneReady: true,
             }
           : undefined,
+      recordAgent: {
+        outDir: path.join(
+          provided.artifactDir,
+          'agent',
+          `${meta.logicalId}-${shortHash(meta.runId)}`
+        ),
+        onResult(result) {
+          if (!result.artifacts) return;
+          (meta.agentRuns ??= []).push({
+            status: result.status,
+            trajectory: relativeArtifactPath(
+              provided.artifactDir,
+              result.artifacts.trajectoryPath
+            ),
+            images: result.artifacts.imagePaths.map((image) =>
+              relativeArtifactPath(provided.artifactDir, image)
+            ),
+          });
+        },
+      },
       timeoutMs: provided.sessionTimeoutMs,
       simulatorObjects,
       signal: context.signal,
@@ -323,7 +345,12 @@ async function runSessionTest(
       context
     );
   } catch (error) {
-    callbackError = error;
+    callbackError =
+      error instanceof AiUnavailableError
+        ? new XRBlocksTestFailure('verifier', 'test', error.message, {
+            cause: error,
+          })
+        : error;
   }
 
   try {
@@ -358,6 +385,10 @@ async function runSessionTest(
 function sceneLabel(scene: SceneVariant | undefined): string {
   if (scene === undefined) return 'default';
   return typeof scene === 'string' ? scene : scene.path;
+}
+
+function shortHash(value: string) {
+  return createHash('sha256').update(value).digest('hex').slice(0, 12);
 }
 
 function testOptions(

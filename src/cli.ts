@@ -3,7 +3,7 @@ import {realpathSync} from 'node:fs';
 import path from 'node:path';
 import {stdin} from 'node:process';
 import {fileURLToPath} from 'node:url';
-import {createAi} from './ai.js';
+import {createAiModel} from './ai.js';
 import {XRBlocksSession} from './session/index.js';
 import {commandHelp, parseCommand} from './command-config.js';
 import {loadDotEnv} from './env.js';
@@ -66,9 +66,9 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       return result.status === 'valid' ? 0 : 1;
     }
     case 'agent': {
-      await createAi();
+      createAiModel(command.model);
       const session = await XRBlocksSession.open(command.session);
-      const payload = await session
+      const result = await session
         .act(command.task, {
           model: command.model,
           maxTurns: command.maxTurns,
@@ -76,8 +76,8 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
           onEvent: command.quiet ? undefined : printAgentEvent,
         })
         .finally(() => session.close());
-      console.log(JSON.stringify(payload, null, 2));
-      return 0;
+      console.log(JSON.stringify(printableAgentResult(result), null, 2));
+      return result.status === 'completed' ? 0 : 1;
     }
   }
 }
@@ -103,6 +103,40 @@ function printAgentEvent(event: Record<string, unknown>) {
       `  ${toolCall.name}: ${JSON.stringify(toolCall.args ?? {}, null, 2)}`
     );
   }
+}
+
+function printableAgentResult(
+  result: Awaited<ReturnType<XRBlocksSession['act']>>
+) {
+  return {
+    ...result,
+    trajectory: {
+      ...result.trajectory,
+      events: result.trajectory.events.map((event) => {
+        if (event.type !== 'observation') return event;
+        const observation = asObject(event.result);
+        if (!Array.isArray(observation?.images)) return event;
+        return {
+          ...event,
+          result: {
+            ...observation,
+            images: observation.images.map((value) => {
+              const image = asObject(value);
+              if (!image) return value;
+              const {dataUrl: _dataUrl, ...metadata} = image;
+              return metadata;
+            }),
+          },
+        };
+      }),
+    },
+  };
+}
+
+function asObject(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 if (

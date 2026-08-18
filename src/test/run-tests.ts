@@ -245,6 +245,7 @@ function collectTestRun(
     realTime: meta.realTime,
     video: meta.video,
     videoTimeline: meta.videoTimeline,
+    agentRuns: meta.agentRuns,
     message: firstError ? errorMessage(firstError) : undefined,
     diagnostics: meta.diagnostics,
   };

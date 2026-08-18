@@ -1,5 +1,6 @@
 import {URL} from 'node:url';
-import {runSessionAct, type ActExitPayload, type ActOptions} from '../agent.js';
+import {runSessionAct, type ActOptions, type ActResult} from '../agent.js';
+import {writeActArtifacts} from '../agent-artifacts.js';
 import type {MaterializedAppWorkspace} from './workspace.js';
 import type {RunningServer} from '../server.js';
 import {
@@ -76,6 +77,11 @@ export type XRBlocksSessionConfig = XRBlocksSessionTarget & {
   /** Module specifier or URL that the target page can load. */
   embodiedControlImport?: string;
   recordVideo?: SessionVideoRecordingOptions;
+  /** Record each act() trajectory and its observation images. */
+  recordAgent?: {
+    outDir: string;
+    onResult?: (result: ActResult) => void;
+  };
   signal?: AbortSignal;
 };
 
@@ -112,7 +118,8 @@ export class XRBlocksSession {
   private started = false;
   private closing?: Promise<void>;
   private removeAbortListener?: () => void;
-  private acting?: Promise<ActExitPayload>;
+  private acting?: Promise<ActResult>;
+  private agentRunCount = 0;
 
   private readonly dependencies: SessionDependencies;
 
@@ -345,15 +352,23 @@ export class XRBlocksSession {
     );
   }
 
-  act(instruction: string, options: ActOptions = {}): Promise<ActExitPayload> {
+  act(instruction: string, options: ActOptions = {}): Promise<ActResult> {
     this.requireRuntime();
     if (this.acting)
       throw new Error(
         'An agent act() call is already running for this Session.'
       );
+    const runNumber = ++this.agentRunCount;
     const run = runSessionAct(this, instruction, {
       ...options,
       signal: options.signal ?? this.config.signal,
+    }).then(async (result) => {
+      const outDir = this.config.recordAgent?.outDir;
+      if (!outDir) return result;
+      const artifacts = await writeActArtifacts(result, outDir, runNumber);
+      const recorded = {...result, artifacts};
+      this.config.recordAgent?.onResult?.(recorded);
+      return recorded;
     });
     this.acting = run;
     const clear = () => {
@@ -589,6 +604,9 @@ function validateSessionConfig(config: XRBlocksSessionConfig) {
     !config.embodiedControlImport.trim()
   ) {
     throw new Error('embodiedControlImport must not be empty.');
+  }
+  if (config.recordAgent !== undefined && !config.recordAgent.outDir.trim()) {
+    throw new Error('recordAgent.outDir must not be empty.');
   }
 }
 

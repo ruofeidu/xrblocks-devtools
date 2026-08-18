@@ -1,11 +1,11 @@
 export {runTests, type AppBinding, type RunTestsOptions} from './run-tests.js';
 export {VerifierError} from './failure.js';
+export {judge, type JudgeEvidence, type JudgeOptions} from './judge.js';
 export {
-  judge,
-  type JudgeImageInput,
-  type JudgeInput,
-  type JudgeOptions,
-} from './judge.js';
+  judgeTrajectory,
+  type JudgeTrajectoryOptions,
+  type TrajectoryVerdict,
+} from './judge-trajectory.js';
 export {
   afterAll,
   afterEach,
@@ -25,6 +25,7 @@ export {
   type SceneVariant,
 } from './authoring.js';
 export type {
+  AgentRunArtifact,
   EvaluationError,
   EvaluationResult,
   TestResult,

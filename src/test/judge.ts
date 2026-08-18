@@ -1,63 +1,80 @@
 import {
+  Output,
+  generateText,
+  jsonSchema,
+  type LanguageModel,
+  type UserContent,
+} from 'ai';
+import {
   AiUnavailableError,
-  createAi,
+  aiImagePart,
+  aiTimeoutMs,
+  createAiModel,
+  DEFAULT_AI_MAX_RETRIES,
   DEFAULT_AI_MODEL,
-  type Ai,
-  type AiPart,
 } from '../ai.js';
+import {JUDGE_SYSTEM_INSTRUCTION} from '../agent-prompts.js';
+import type {JsonObject} from '../types.js';
 import {VerifierError} from './failure.js';
-
-const JUDGE_SYSTEM_INSTRUCTION = `You are an impartial test judge.
-Evaluate only the supplied evidence against the user's evaluation request.
-Do not assume hidden facts or treat stated intent as proof.
-Return exactly one JSON value that matches the supplied schema.`;
 
 /** Environment override set by the test runner's --judge-model option. */
 export const JUDGE_MODEL_ENV = 'XRBLOCKS_JUDGE_MODEL';
 
-export type JudgeImageInput = {
-  /** A base64 data URL or raw base64-encoded image. */
-  image: string;
-  /** The image MIME type. Defaults to the data URL type or image/png. */
-  mimeType?: string;
-};
-
-export type JudgeInput = string | JudgeImageInput;
+export type JudgeEvidence =
+  | {type: 'text'; label: string; text: string}
+  | {type: 'data'; label: string; value: JsonObject}
+  | {
+      type: 'image';
+      label: string;
+      /** A base64 data URL or raw base64-encoded image. */
+      image: string;
+      /** The image MIME type. Defaults to the data URL type or image/png. */
+      mimeType?: string;
+    };
 
 export interface JudgeOptions {
   prompt: string;
-  input: JudgeInput;
+  evidence: readonly JudgeEvidence[];
   schema: Record<string, unknown>;
   model?: string;
+  /** Retry limit for transient model errors. Defaults to 3. */
+  maxRetries?: number;
   /** Maximum duration of each Google AI request. Defaults to 40 seconds. */
   timeoutMs?: number;
   signal?: AbortSignal;
 }
 
 type JudgeDependencies = {
-  createAi?: () => Promise<Ai>;
+  createModel?: (model?: string) => LanguageModel;
+  generateText?: typeof generateText;
 };
 
 export async function judge<T = unknown>(options: JudgeOptions): Promise<T> {
-  return judgeWithDependencies<T>(options);
+  return judgeWithSystemInstruction<T>(options, JUDGE_SYSTEM_INSTRUCTION);
 }
 
 /** @internal */
-export async function judgeWithDependencies<T = unknown>(
+export async function judgeWithSystemInstruction<T = unknown>(
   options: JudgeOptions,
+  systemInstruction: string,
   dependencies: JudgeDependencies = {}
 ): Promise<T> {
   try {
-    const ai = await (dependencies.createAi ?? createAi)();
-    return await ai.generateJson<T>({
-      operation: 'judge',
-      model: resolveJudgeModel(options.model),
-      systemInstruction: JUDGE_SYSTEM_INSTRUCTION,
-      parts: judgeParts(options),
-      schema: options.schema,
-      timeoutMs: options.timeoutMs,
-      signal: options.signal,
+    const content = judgeContent(options);
+    const runGenerateText = dependencies.generateText ?? generateText;
+    const result = await runGenerateText({
+      model: (dependencies.createModel ?? createAiModel)(
+        resolveJudgeModel(options.model)
+      ),
+      instructions: systemInstruction,
+      messages: [{role: 'user', content}],
+      output: Output.object<T>({schema: jsonSchema<T>(options.schema)}),
+      temperature: 0,
+      maxRetries: options.maxRetries ?? DEFAULT_AI_MAX_RETRIES,
+      timeout: aiTimeoutMs(options.timeoutMs),
+      abortSignal: options.signal,
     });
+    return result.output;
   } catch (error) {
     if (error instanceof VerifierError) throw error;
     const message =
@@ -71,34 +88,54 @@ export async function judgeWithDependencies<T = unknown>(
 /** @internal */
 export function resolveJudgeModel(model?: string): string {
   return (
-    model?.trim() ||
-    process.env[JUDGE_MODEL_ENV]?.trim() ||
-    process.env.MODEL_NAME?.trim() ||
-    DEFAULT_AI_MODEL
+    model?.trim() || process.env[JUDGE_MODEL_ENV]?.trim() || DEFAULT_AI_MODEL
   );
 }
 
-function judgeParts(options: JudgeOptions): AiPart[] {
+function judgeContent(options: JudgeOptions): UserContent {
   if (!options.prompt.trim())
     throw new Error('Judge prompt must not be empty.');
   if (!isJsonObject(options.schema))
     throw new TypeError('Judge schema must be a JSON object.');
+  if (!Array.isArray(options.evidence) || options.evidence.length === 0)
+    throw new Error('Judge evidence must not be empty.');
 
-  const parts: AiPart[] = [{text: `Evaluation request:\n${options.prompt}`}];
-  if (typeof options.input === 'string') {
-    if (!options.input.trim())
-      throw new Error('Judge input must not be empty.');
-    parts.push({text: `Evidence:\n${options.input}`});
-  } else {
-    parts.push(
-      {text: 'Evidence image:'},
-      {
-        image: {
-          data: options.input.image,
-          mimeType: options.input.mimeType,
-        },
-      }
-    );
+  const parts: UserContent = [
+    {type: 'text', text: `Evaluation request:\n${options.prompt}`},
+  ];
+  for (const item of options.evidence) {
+    if (!item.label.trim())
+      throw new Error('Judge evidence labels must not be empty.');
+    if (item.type === 'text') {
+      if (!item.text.trim())
+        throw new Error(
+          `Judge text evidence "${item.label}" must not be empty.`
+        );
+      parts.push({
+        type: 'text',
+        text: `Text evidence (${item.label}):\n${item.text}`,
+      });
+      continue;
+    }
+    if (item.type === 'data') {
+      if (!isJsonObject(item.value))
+        throw new TypeError(
+          `Judge data evidence "${item.label}" must be a JSON object.`
+        );
+      parts.push({
+        type: 'text',
+        text: `Data evidence (${item.label}):\n${JSON.stringify(item.value)}`,
+      });
+      continue;
+    }
+    if (item.type === 'image') {
+      parts.push(
+        {type: 'text', text: `Image evidence (${item.label}):`},
+        aiImagePart(item.image, item.mimeType)
+      );
+      continue;
+    }
+    throw new TypeError('Unknown judge evidence type.');
   }
   return parts;
 }

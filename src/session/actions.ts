@@ -24,12 +24,53 @@ type AgentActionDefinition = {
   ): unknown | Promise<unknown>;
 };
 
+export type AgentToolProfile = 'primitive' | 'targeted';
+
+export class AgentActionError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'AgentActionError';
+  }
+}
+
+const AGENT_WAIT_MIN_MS = 50;
+const AGENT_WAIT_MAX_MS = 2_000;
+
+const AGENT_TOOL_PROFILES = {
+  primitive: [
+    'say',
+    'move',
+    'rotate',
+    'move_hand',
+    'rotate_hand',
+    'gesture',
+    'start_select',
+    'end_select',
+    'wait',
+  ],
+  targeted: [
+    'say',
+    'move',
+    'rotate',
+    'move_hand',
+    'rotate_hand',
+    'gesture',
+    'start_select',
+    'end_select',
+    'wait',
+    'look_at_target',
+    'point_to_target',
+    'reach_to_target',
+    'click',
+  ],
+} as const satisfies Record<AgentToolProfile, readonly string[]>;
+
 const SchemaType = {
-  array: 'ARRAY',
-  integer: 'INTEGER',
-  number: 'NUMBER',
-  object: 'OBJECT',
-  string: 'STRING',
+  array: 'array',
+  integer: 'integer',
+  number: 'number',
+  object: 'object',
+  string: 'string',
 } as const;
 
 const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
@@ -91,6 +132,39 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
       session.gesture(requiredHandArg(args), poseArg(args.pose)),
   },
   {
+    name: 'start_select',
+    description:
+      'Begin holding a WebXR select gesture with the left or right hand; no-op if already selecting.',
+    parameters: handToolSchema(),
+    execute: (session, args) => session.startSelect(handArg(args)),
+  },
+  {
+    name: 'end_select',
+    description:
+      'Release a held WebXR select gesture with the left or right hand.',
+    parameters: handToolSchema(),
+    execute: (session, args) => session.endSelect(handArg(args)),
+  },
+  {
+    name: 'wait',
+    description: `Wait for the app to advance for ${AGENT_WAIT_MIN_MS} to ${AGENT_WAIT_MAX_MS} milliseconds.`,
+    parameters: {
+      type: SchemaType.object,
+      properties: {
+        duration_ms: {
+          type: SchemaType.integer,
+          minimum: AGENT_WAIT_MIN_MS,
+          maximum: AGENT_WAIT_MAX_MS,
+        },
+      },
+      required: ['duration_ms'],
+    },
+    prompt:
+      'wait advances the app without moving the user. Use it only when the app needs time to respond.',
+    execute: (session, args) =>
+      session.wait(boundedWaitDuration(args.duration_ms)),
+  },
+  {
     name: 'look_at_target',
     description:
       'Rotate the camera to look at a unique scene name, Devtools tag, or world position.',
@@ -131,6 +205,7 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'click',
     description: 'Perform a WebXR select gesture with the left or right hand.',
+    prompt: 'click performs a quick select gesture with one hand.',
     parameters: {
       type: SchemaType.object,
       properties: {
@@ -149,44 +224,63 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
       );
     },
   },
-  {
-    name: 'start_select',
-    description:
-      'Begin holding a WebXR select gesture with the left or right hand; no-op if already selecting.',
-    parameters: handToolSchema(),
-    execute: (session, args) => session.startSelect(handArg(args)),
-  },
-  {
-    name: 'end_select',
-    description:
-      'Release a held WebXR select gesture with the left or right hand.',
-    parameters: handToolSchema(),
-    execute: (session, args) => session.endSelect(handArg(args)),
-  },
 ]);
 
-export function agentActionDeclarations() {
-  return AGENT_ACTIONS.map(({name, description, parameters}) => ({
+export function agentActionDeclarations(profile: AgentToolProfile) {
+  return agentActions(profile).map(({name, description, parameters}) => ({
     name,
     description,
     parameters,
   }));
 }
 
-export function agentActionPrompt() {
-  return AGENT_ACTIONS.flatMap((definition) =>
-    definition.prompt ? [definition.prompt] : []
-  ).join('\n');
+export function agentActionPrompt(profile: AgentToolProfile) {
+  return agentActions(profile)
+    .flatMap((definition) => (definition.prompt ? [definition.prompt] : []))
+    .join('\n');
 }
 
 export function executeAgentAction(
   session: XRBlocksSession,
+  profile: AgentToolProfile,
   name: string,
   args: JsonObject
 ) {
-  const definition = AGENT_ACTIONS.find((candidate) => candidate.name === name);
-  if (!definition) throw new Error(`Unknown autonomous runner tool: ${name}`);
+  const definition = agentActions(profile).find(
+    (candidate) => candidate.name === name
+  );
+  if (!definition) {
+    throw new AgentActionError(
+      `Autonomous runner tool ${name} is not available in the ${profile} profile.`
+    );
+  }
   return definition.execute(session, args);
+}
+
+function agentActions(profile: AgentToolProfile) {
+  const names = AGENT_TOOL_PROFILES[profile];
+  if (!names) {
+    throw new AgentActionError(
+      `Unknown autonomous runner tool profile: ${profile}`
+    );
+  }
+  return AGENT_ACTIONS.filter(({name}) =>
+    (names as readonly string[]).includes(name)
+  );
+}
+
+function boundedWaitDuration(value: unknown) {
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < AGENT_WAIT_MIN_MS ||
+    value > AGENT_WAIT_MAX_MS
+  ) {
+    throw new AgentActionError(
+      `duration_ms must be an integer between ${AGENT_WAIT_MIN_MS} and ${AGENT_WAIT_MAX_MS}.`
+    );
+  }
+  return value;
 }
 
 function requireTarget(args: JsonObject) {
@@ -197,21 +291,21 @@ function requireTarget(args: JsonObject) {
   ) {
     return args.target;
   }
-  throw new Error(
+  throw new AgentActionError(
     'Target must be a context name, Devtools tag, or vec3 tuple.'
   );
 }
 
 function requireString(value: unknown, name: string) {
   if (typeof value !== 'string' || !value.trim()) {
-    throw new Error(`${name} must be a non-empty string.`);
+    throw new AgentActionError(`${name} must be a non-empty string.`);
   }
   return value;
 }
 
 function angularSpeedOptions(args: JsonObject) {
   return {
-    speedDegreesPerSecond: boundedSpeed(
+    speedDegreesPerSecond: actionSpeed(
       optionalNumber(args.speed_degrees_per_second),
       ANGULAR_SPEED,
       'speed_degrees_per_second'
@@ -221,7 +315,7 @@ function angularSpeedOptions(args: JsonObject) {
 
 function linearSpeedOptions(args: JsonObject, config: SpeedConfig) {
   return {
-    speedMetersPerSecond: boundedSpeed(
+    speedMetersPerSecond: actionSpeed(
       optionalNumber(args.speed_meters_per_second),
       config,
       'speed_meters_per_second'
@@ -251,34 +345,54 @@ function rotationArgs(args: JsonObject) {
 function handArg(args: JsonObject): PhysicalHand {
   const hand = args.hand ?? 'right';
   if (hand === 'left' || hand === 'right') return hand;
-  throw new Error('Hand must be left or right.');
+  throw new AgentActionError('Hand must be left or right.');
 }
 
 function requiredHandArg(args: JsonObject): PhysicalHand {
-  if (args.hand === undefined) throw new Error('Hand is required.');
+  if (args.hand === undefined) throw new AgentActionError('Hand is required.');
   return handArg(args);
 }
 
 function poseArg(value: unknown): NamedHandPose {
-  if (typeof value !== 'string') throw new Error('Pose must be a string.');
+  if (typeof value !== 'string')
+    throw new AgentActionError('Pose must be a string.');
   if ((NAMED_HAND_POSES as readonly string[]).includes(value)) {
     return value as NamedHandPose;
   }
-  throw new Error(`Pose must be one of: ${NAMED_HAND_POSES.join(', ')}.`);
+  throw new AgentActionError(
+    `Pose must be one of: ${NAMED_HAND_POSES.join(', ')}.`
+  );
 }
 
 function optionalPositiveNumber(value: unknown, label: string) {
   if (value === undefined || value === null) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`${label} must be a positive finite number.`);
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    throw new AgentActionError(`${label} must be a positive finite number.`);
   }
-  return parsed;
+  return value;
 }
 
 function optionalNumber(value: unknown) {
   if (value === undefined || value === null) return undefined;
-  return Number(value);
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new AgentActionError('Action numbers must be finite numbers.');
+  }
+  return value;
+}
+
+function actionSpeed(
+  value: number | undefined,
+  config: SpeedConfig,
+  label: string
+) {
+  try {
+    return boundedSpeed(value, config, label);
+  } catch (error) {
+    throw new AgentActionError(
+      error instanceof Error ? error.message : String(error),
+      {cause: error}
+    );
+  }
 }
 
 function isVec3(value: unknown): value is [number, number, number] {

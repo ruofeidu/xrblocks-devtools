@@ -148,9 +148,15 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag('model', 'string', 'Select the model', 'model'),
       flag('max-turns', 'number', 'Limit model turns', 'count'),
       flag(
+        'record-agent',
+        'string',
+        'Write agent trajectories and images',
+        'dir'
+      ),
+      flag(
         'observations',
         'string',
-        'Select image, semantic-tree, visible, som, tags, state, spatial, and/or view',
+        'Select image, semantic-tree, visible, som, devtools-tags, state, spatial, and/or view',
         'kinds'
       ),
       flag('quiet', 'boolean', 'Suppress progress events'),
@@ -363,6 +369,9 @@ function sessionConfig(
     embodiedControlImport: stringValue(flags, 'embodied-control-import'),
     timeoutMs: numberValue(flags, 'timeout-ms'),
     recordVideo: recordVideo(flags),
+    recordAgent: stringValue(flags, 'record-agent')
+      ? {outDir: stringValue(flags, 'record-agent')!}
+      : undefined,
     signal,
   };
 }

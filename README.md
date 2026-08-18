@@ -29,10 +29,9 @@ Install the XR Blocks v0.20 runtime peers in the application, or pass
 npm install xrblocks three @pmndrs/uikit @preact/signals-core lit
 ```
 
-The following are optional dependencies that add additional functionality to XR Blocks Devtools.
+The following optional dependencies add more functionality to XR Blocks Devtools.
 
 ```bash
-npm install --save-dev @google/genai # session.act() and the agent command
 npm install --save-dev tiny-tts      # injectAudio({text})
 npm install --save-dev three-pathfinding # --simulator-navmesh
 ```
@@ -202,19 +201,23 @@ xrblocks-devtools agent (--app-dir <dir> | --url <url>) --task <text> [options]
 
 The agent command accepts all Interact session and recording flags plus:
 
-| Flag                     | Value and behavior                                                                                                  |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `--task <text>`          | Required natural-language task.                                                                                     |
-| `--model <model>`        | Gemini model. Default `gemini-3.6-flash`.                                                                           |
-| `--max-turns <count>`    | Positive model-turn limit. Default `30`.                                                                            |
-| `--observations <kinds>` | Comma-separated `image`, `semantic-tree`, `visible`, `som`, `tags`, `state`, `spatial`, and/or `view`. Default all. |
-| `--quiet`                | Suppress progress events on stderr.                                                                                 |
-| `-h`, `--help`           | Show command help.                                                                                                  |
+| Flag                     | Value and behavior                                                                                                                            |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--task <text>`          | Required natural-language task.                                                                                                               |
+| `--model <model>`        | Gemini model. Default `gemini-3.6-flash`.                                                                                                     |
+| `--max-turns <count>`    | Positive model-turn limit. Default `30`.                                                                                                      |
+| `--record-agent <dir>`   | Write each trajectory as JSONL and save its observation images.                                                                               |
+| `--observations <kinds>` | Comma-separated `image`, `semantic-tree`, `visible`, `som`, `devtools-tags`, `state`, `spatial`, and/or `view`. The default excludes `state`. |
+| `--quiet`                | Suppress progress events on stderr.                                                                                                           |
+| `-h`, `--help`           | Show command help.                                                                                                                            |
 
 At startup, the CLI loads an optional `.env` file from the current working
-directory. Existing shell variables take priority. Set `GEMINI_API_KEY` there
-for AI features. Only `agent` requires the key before opening Chromium;
-`interact` can start without it.
+directory. Existing shell variables take priority. Set
+`GOOGLE_GENERATIVE_AI_API_KEY` there for AI features. Only `agent` requires the
+key before opening Chromium; `interact` can start without it.
+
+`GOOGLE_GEMINI_KEY` is also accepted. Devtools maps it to
+`GOOGLE_GENERATIVE_AI_API_KEY` when the standard variable is not set.
 
 Set `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container` when running in Docker or
 containerized CI environments. This launches Chromium with container-friendly
@@ -270,9 +273,11 @@ Use `judge` for a structured AI evaluation of text or image evidence:
 ```ts
 import {judge} from '@xrblocks/devtools/test';
 
-const result = await judge<{passes: boolean; reason: string}>({
+const judgment = await judge<{passes: boolean; reason: string}>({
   prompt: 'Does the image show a clearly visible red cube?',
-  input: {image: screenshotDataUrl},
+  evidence: [
+    {type: 'image', label: 'Final camera view', image: screenshotDataUrl},
+  ],
   schema: {
     type: 'object',
     properties: {
@@ -283,13 +288,28 @@ const result = await judge<{passes: boolean; reason: string}>({
   },
 });
 
-expect(result.passes, result.reason).toBe(true);
+expect(judgment.passes, judgment.reason).toBe(true);
 ```
 
-The judge uses an internal system instruction and deterministic Gemini output.
-Missing dependencies, missing or invalid credentials, and request failures throw
-`VerifierError`. The test runner reports these as verifier errors and does not
-score the candidate.
+Evidence can contain ordered `text`, `data`, and `image` items. The judge uses
+an internal system instruction and deterministic Gemini output. Missing or
+invalid credentials and request failures throw `VerifierError`. The test runner
+reports these as verifier errors and does not score the candidate.
+
+Use `judgeTrajectory` to evaluate one requirement from an `act()` result. The
+result is always a Boolean verdict with one reason:
+
+```ts
+import {expect, judgeTrajectory} from '@xrblocks/devtools/test';
+
+const actResult = await session.act('Select the red cube.');
+const verdict = await judgeTrajectory({
+  requirement: 'The red cube is selected.',
+  trajectory: actResult.trajectory,
+});
+
+expect(verdict.verdict, verdict.reason).toBe(true);
+```
 
 Run one test file against one prepared application:
 
@@ -304,14 +324,15 @@ xrblocks-devtools test tests/evaluation.ts --app ./app [options]
 | `--entry <path>`        | HTML page inside the application. Default `index.html`.            |
 | `--output <dir>`        | Result and recordings. Default `artifacts/xrblocks-test`.          |
 | `--timeout-ms <ms>`     | Browser startup timeout for session tests. Default `300000`.       |
-| `--judge-model <model>` | Model used by `judge()`. Overrides `MODEL_NAME` and the default.   |
+| `--judge-model <model>` | Model used by `judge()`. Overrides the default.                    |
 | `-h`, `--help`          | Show command help.                                                 |
 
 Each test run contributes equally to the score. Hand and scene variants count
 as separate test runs. Set `required: true` to make any failed variant set the
 score to `0`. Session tests receive the complete `XRBlocksSession`. `realTime`
 defaults to `false`. A session test records video only when its options include a
-simple `video` name.
+simple `video` name. Each `session.act()` call records a JSONL trajectory and
+extracted observation images under the test artifact directory.
 
 Use `scenes` to run a session test against XR Blocks SDK environments or custom
 simulator manifests. SDK environments use their display names. Manifest paths
@@ -441,7 +462,7 @@ Session accepts exactly one of `appDir` and `url`. App-directory sessions can
 also set `xrblocksRoot` and `entry`. Shared options are `headless`, `timeoutMs`,
 `viewport` in pixels, `realTime`, `monitorAudio`, `simulatorReachLimit`,
 `simulatorNavMesh`,
-`embodiedControlImport`, `recordVideo`, and `signal`.
+`embodiedControlImport`, `recordVideo`, `recordAgent`, and `signal`.
 
 URL sessions bypass workspace injection. Their page must expose XR Blocks debug
 state through `?xrAutomation=1&debug=1` and resolve the embodied-control addon.
@@ -554,11 +575,34 @@ const session = await XRBlocksSession.open({
 });
 ```
 
-`session.act()` is an optional programmatic action loop. It requires
-`GEMINI_API_KEY` and the optional `@google/genai` package.
-The agent ends with an `exit` tool call. The resolved result contains its final
-`message` and any optional JSON object in `data`. The `agent` command prints
-this same payload when it exits. It is not an assertion or benchmark score.
+`session.act()` is a programmatic action loop built on AI SDK Core. It requires
+`GOOGLE_GENERATIVE_AI_API_KEY`, the standard AI SDK Google provider variable.
+It returns a status, token and turn usage, and a complete trajectory. A
+completed run also contains the agent's `exit` message and any optional JSON
+data.
+
+```ts
+const result = await session.act('Select the red cube.', {
+  maxTurns: 20,
+  maxRetries: 3,
+  timeoutMs: 40_000,
+});
+
+console.log(result.status, result.exit, result.trajectory);
+```
+
+The default `targeted` profile provides incremental body and hand controls, a
+bounded `wait` action, and named target actions such as `look_at_target`,
+`point_to_target`, `reach_to_target`, and `click`. Pass
+`toolProfile: 'primitive'` to `session.act()` when a task must use only
+incremental controls.
+The agent always receives the `exit` tool. DevTools tags are untrusted navigation
+hints. They do not prove that the app met a requirement.
+
+Set `recordAgent: {outDir}` in `XRBlocksSessionConfig` to save each run as JSONL
+and separate image files. Session tests set this option automatically. Use
+`judgeTrajectory()` to turn a trajectory and optional supporting evidence into
+`{verdict, reason}`. Keep the final assertion explicit with Vitest `expect()`.
 
 ## Keep Your API Key Secure
 
