@@ -201,22 +201,23 @@ xrblocks-devtools agent (--app-dir <dir> | --url <url>) --task <text> [options]
 
 The agent command accepts all Interact session and recording flags plus:
 
-| Flag                     | Value and behavior                                                                                                                            |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--task <text>`          | Required natural-language task.                                                                                                               |
-| `--model <model>`        | Gemini model. Default `gemini-3.6-flash`.                                                                                                     |
-| `--max-turns <count>`    | Positive model-turn limit. Default `30`.                                                                                                      |
-| `--record-agent <dir>`   | Write each trajectory as JSONL and save its observation images.                                                                               |
-| `--observations <kinds>` | Comma-separated `image`, `semantic-tree`, `visible`, `som`, `devtools-tags`, `state`, `spatial`, and/or `view`. The default excludes `state`. |
-| `--quiet`                | Suppress progress events on stderr.                                                                                                           |
-| `-h`, `--help`           | Show command help.                                                                                                                            |
+| Flag                               | Value and behavior                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--task <text>`                    | Required natural-language task.                                                                                                                        |
+| `--model <model>`                  | Gemini model. Default `gemini-3.6-flash`.                                                                                                              |
+| `--max-turns <count>`              | Positive model-turn limit. Default `30`.                                                                                                               |
+| `--judge-trajectory <requirement>` | Judge the completed trajectory and print both the action result and `{verdict, reason}`.                                                               |
+| `--record-agent <dir>`             | Write each trajectory as JSONL and save its observation images.                                                                                        |
+| `--observations <kinds>`           | `all` or comma-separated `image`, `semantic-tree`, `visible`, `som`, `devtools-tags`, `state`, `spatial`, and/or `view`. The default excludes `state`. |
+| `--quiet`                          | Suppress progress events on stderr.                                                                                                                    |
+| `-h`, `--help`                     | Show command help.                                                                                                                                     |
 
 At startup, the CLI loads an optional `.env` file from the current working
 directory. Existing shell variables take priority. Set
 `GOOGLE_GENERATIVE_AI_API_KEY` there for AI features. Only `agent` requires the
 key before opening Chromium; `interact` can start without it.
 
-`GOOGLE_GEMINI_KEY` is also accepted. Devtools maps it to
+`GEMINI_API_KEY` is also accepted. Devtools maps it to
 `GOOGLE_GENERATIVE_AI_API_KEY` when the standard variable is not set.
 
 Set `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container` when running in Docker or
@@ -351,8 +352,9 @@ it_session(
 
 ## Interactive function reference
 
-Targets are an exact unique scene/context name, a world position `[x, y, z]` in
-meters, or `{tag: 'name'}`. `left` and `right` select physical hands.
+Targets are a live Scene Context ID such as `ctx_1`, an exact unique
+scene/context name, a world position `[x, y, z]` in meters, or `{tag: 'name'}`.
+`left` and `right` select physical hands.
 
 ### Observe and save evidence
 
@@ -390,7 +392,7 @@ meters, or `{tag: 'name'}`. `left` and `right` select physical hands.
 | `setHandPose(hand, rotations)`      | Apply sparse named joint `[x,y,z]` rotations in radians over 500 ms.                                                                      |
 | `lookAtTarget(target, options?)`    | Camera speed in degrees/s; default `90`, range `5–180`.                                                                                   |
 | `pointTo(hand?, target?, options?)` | Aim a controller ray. Right hand and `90°/s` default.                                                                                     |
-| `reachTo(hand?, target?, options?)` | Move a hand to a target. Right hand and `0.5 m/s` default; range `0.05–1.5`.                                                              |
+| `reachTo(hand?, target?, options?)` | Move the index fingertip to a target. Right hand and `0.5 m/s` default; range `0.05–1.5`.                                                 |
 | `startSelect(hand?)`                | Begin and hold WebXR selection. Default right.                                                                                            |
 | `endSelect(hand?)`                  | Release selection. Default right.                                                                                                         |
 | `click(hand?, options?)`            | Select press and release. Default right and `durationMs: 200`.                                                                            |

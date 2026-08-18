@@ -9,6 +9,7 @@ import {commandHelp, parseCommand} from './command-config.js';
 import {loadDotEnv} from './env.js';
 import {runInteractive, interactiveHelpText} from './interactive.js';
 import {installInterruptHandlers} from './signals.js';
+import {judgeTrajectory} from './test/judge-trajectory.js';
 import {runTests} from './test/run-tests.js';
 import {visualize} from './visualize/index.js';
 
@@ -76,8 +77,19 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
           onEvent: command.quiet ? undefined : printAgentEvent,
         })
         .finally(() => session.close());
-      console.log(JSON.stringify(printableAgentResult(result), null, 2));
-      return result.status === 'completed' ? 0 : 1;
+      const act = printableAgentResult(result);
+      if (!command.judgeTrajectory) {
+        console.log(JSON.stringify(act, null, 2));
+        return result.status === 'completed' ? 0 : 1;
+      }
+      const judgment = await judgeTrajectory({
+        requirement: command.judgeTrajectory,
+        trajectory: result.trajectory,
+        model: command.model,
+        signal,
+      });
+      console.log(JSON.stringify({act, judgment}, null, 2));
+      return result.status === 'completed' && judgment.verdict ? 0 : 1;
     }
   }
 }

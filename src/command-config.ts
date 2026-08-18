@@ -43,6 +43,7 @@ export type ParsedCommand =
       task: string;
       model?: string;
       maxTurns?: number;
+      judgeTrajectory?: string;
       context: AgentObservationKind[];
       quiet: boolean;
     }
@@ -148,6 +149,12 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag('model', 'string', 'Select the model', 'model'),
       flag('max-turns', 'number', 'Limit model turns', 'count'),
       flag(
+        'judge-trajectory',
+        'string',
+        'Judge the completed trajectory against a requirement',
+        'requirement'
+      ),
+      flag(
         'record-agent',
         'string',
         'Write agent trajectories and images',
@@ -156,7 +163,7 @@ const definitions: Record<CommandName, CommandDefinition> = {
       flag(
         'observations',
         'string',
-        'Select image, semantic-tree, visible, som, devtools-tags, state, spatial, and/or view',
+        'Select all or a comma-separated observation list',
         'kinds'
       ),
       flag('quiet', 'boolean', 'Suppress progress events'),
@@ -266,12 +273,20 @@ export function parseCommand(
 
   const task = stringValue(parsed.flags, 'task');
   if (!task) throw new Error('Agent requires --task.');
+  const judgeTrajectory = stringValue(parsed.flags, 'judge-trajectory');
+  if (
+    parsed.flags['judge-trajectory'] !== undefined &&
+    !judgeTrajectory?.trim()
+  ) {
+    throw new Error('--judge-trajectory requires a non-empty requirement.');
+  }
   return {
     kind: name,
     session,
     task,
     model: stringValue(parsed.flags, 'model'),
     maxTurns: numberValue(parsed.flags, 'max-turns'),
+    judgeTrajectory,
     context: parseAgentObservations(stringValue(parsed.flags, 'observations')),
     quiet: Boolean(parsed.flags.quiet),
   };

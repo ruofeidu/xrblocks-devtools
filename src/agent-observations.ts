@@ -68,7 +68,7 @@ export const AGENT_OBSERVATIONS: readonly AgentObservationDefinition[] =
       kind: 'semantic-tree',
       requirements: {semanticTree: true},
       prompt:
-        'semantic-tree describes semantic scene nodes. Use an exact unique node name as a target when available.',
+        'semantic-tree describes semantic scene nodes. A live node id such as ctx_1 is an actionable target. An exact unique node name is also valid.',
       materialize: (resources) => ({
         semantic_tree: requireContextProduct(
           resources,
@@ -81,7 +81,7 @@ export const AGENT_OBSERVATIONS: readonly AgentObservationDefinition[] =
       kind: 'visible',
       requirements: {visibleObjects: true},
       prompt:
-        'visible contains context nodes with exact names and view data. Use exact unique names instead of estimated coordinates.',
+        'visible contains context nodes with live actionable ids, exact names, and view data. Prefer a node id or exact unique name over estimated coordinates.',
       materialize: (resources) => ({
         visible_objects: requireContextProduct(
           resources,
@@ -94,7 +94,7 @@ export const AGENT_OBSERVATIONS: readonly AgentObservationDefinition[] =
       kind: 'som',
       requirements: {setOfMark: true},
       prompt:
-        'som provides an annotated image and marks. A mark label is visual-only; use the matching mark.name as an action target.',
+        'som provides an annotated image and marks. A mark label is visual-only; use the matching mark.nodeId as the action target.',
       materialize: (resources) => {
         const setOfMark = requireContextProduct(
           resources,
@@ -178,6 +178,7 @@ export function normalizeAgentObservations(
 
 export function parseAgentObservations(value?: string) {
   if (value === undefined) return normalizeAgentObservations();
+  if (value.trim() === 'all') return normalizeAgentObservations('all');
   return normalizeAgentObservations(
     value
       .split(',')

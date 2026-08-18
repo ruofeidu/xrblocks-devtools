@@ -167,20 +167,20 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'look_at_target',
     description:
-      'Rotate the camera to look at a unique scene name, Devtools tag, or world position.',
+      'Rotate the camera to look at a live context ID, unique scene name, Devtools tag, or world position.',
     parameters: targetToolSchema(false, ANGULAR_SPEED, true),
     prompt:
-      'look_at_target smoothly rotates the camera toward a named or tagged target at 90 degrees per second by default.',
+      'look_at_target smoothly rotates the camera toward a context ID, named target, or tagged target at 90 degrees per second by default.',
     execute: (session, args) =>
       session.lookAtTarget(requireTarget(args), angularSpeedOptions(args)),
   },
   {
     name: 'point_to_target',
     description:
-      'Aim the selected hand ray at a unique scene name, Devtools tag, or world position without moving the hand.',
+      'Aim the selected hand ray at a live context ID, unique scene name, Devtools tag, or world position without moving the hand.',
     parameters: targetToolSchema(true, ANGULAR_SPEED, true),
     prompt:
-      'point_to_target smoothly aims a hand ray at a named or tagged target at 90 degrees per second by default. It is usually the right action before click.',
+      'point_to_target smoothly aims a hand ray at a context ID, named target, or tagged target at 90 degrees per second by default. Use it before click and while moving a ray-held object toward its destination.',
     execute: (session, args) =>
       session.pointTo(
         handArg(args),
@@ -191,10 +191,10 @@ const AGENT_ACTIONS: readonly AgentActionDefinition[] = Object.freeze([
   {
     name: 'reach_to_target',
     description:
-      'Move the selected hand to a unique scene name, Devtools tag, or world position.',
+      'Move the selected hand so its index fingertip reaches a live context ID, unique scene name, Devtools tag, or world position.',
     parameters: targetToolSchema(true, HAND_MOVE_SPEED, false),
     prompt:
-      'reach_to_target smoothly moves a hand to a named or tagged target at 0.5 meters per second by default. Use point_to_target when only aiming is needed.',
+      'reach_to_target smoothly moves the index fingertip into direct contact with a context ID, named target, or tagged target at 0.5 meters per second by default. Do not use it for ordinary ray selection or ray dragging.',
     execute: (session, args) =>
       session.reachTo(
         handArg(args),
@@ -292,7 +292,7 @@ function requireTarget(args: JsonObject) {
     return args.target;
   }
   throw new AgentActionError(
-    'Target must be a context name, Devtools tag, or vec3 tuple.'
+    'Target must be a context ID, context name, Devtools tag, or vec3 tuple.'
   );
 }
 
@@ -435,7 +435,7 @@ function targetToolSchema(
   const properties: JsonObject = {
     target: {
       description:
-        'An exact scene/context name, [x,y,z] world position, or {"tag":"..."} Devtools target.',
+        'A live context ID, exact scene/context name, [x,y,z] world position, or {"tag":"..."} Devtools target.',
       anyOf: [
         {type: SchemaType.string},
         {

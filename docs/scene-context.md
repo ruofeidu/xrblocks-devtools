@@ -14,9 +14,9 @@ await getSceneContext({
 });
 ```
 
-- `semanticTree` contains the complete semantic hierarchy and exact names.
-- `visibleObjects` contains the current visible semantic nodes and view data.
-- `setOfMark` contains an annotated image and marks tied to semantic nodes.
+- `semanticTree` contains the complete semantic hierarchy, live node IDs, and exact names.
+- `visibleObjects` contains the current visible semantic nodes, live IDs, and view data.
+- `setOfMark` contains an annotated image and marks tied to semantic node IDs.
 
 Calling `saveSetOfMark('./artifacts/marks.png')` writes the image and returns its
 metadata. Refresh context after an action because visibility and intersections
@@ -69,14 +69,16 @@ coverage, and camera distances in meters.
 Embodied functions accept:
 
 ```js
+pointTo('right', 'ctx_1'); // live ID from the current context snapshot
 lookAtTarget('Start Button'); // exact unique context or scene name
 navigateTo([0, 1.5, -2]); // world position in meters
 pointTo('right', {tag: 'start-button'});
 ```
 
-A string resolves against the newest context snapshot first, then exact scene
-object names. Duplicate names or tags are rejected. A tag is usually the most
-stable application contract.
+A string resolves as a live context ID first, then against names in the newest
+context snapshot, then exact scene object names. Duplicate names or tags are
+rejected. Refresh context before reusing an ID after an action. A tag is
+usually the most stable application contract.
 
 ## Complete flow
 
