@@ -8,6 +8,7 @@ async function init({
   const simulator = getSimulatorStatus();
   const deviceCamera = getSimulatorDeviceCameraStatus();
   const core = getCore();
+  ensureSimulatorHandsActive(core);
   configureSimulatorReachLimit(core, simulatorReachLimit);
   await configureSimulatorNavMesh(core, simulatorNavMesh);
   if (window.__xrblocksDevtoolsEmbodiedControl) {

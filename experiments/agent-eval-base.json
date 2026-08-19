@@ -1,6 +1,6 @@
 {
   "name": "xrblocks-sample-agent-evaluation",
-  "runs": 1,
+  "runs": 3,
   "session": {
     "realTime": false
   },

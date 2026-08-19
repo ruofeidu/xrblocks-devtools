@@ -112,6 +112,12 @@ function getEmbodiedControl() {
   return embodiedControl;
 }
 
+function ensureSimulatorHandsActive(core) {
+  if (core.simulator?.controls?.simulatorMode !== 'Hands') {
+    core.simulator?.controls?.setSimulatorMode('Hands');
+  }
+}
+
 function configureSimulatorReachLimit(core, enabled) {
   if (enabled === undefined) return;
   const reachDistance = rawSimulatorReachDistance(core);
