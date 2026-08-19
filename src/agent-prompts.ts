@@ -18,9 +18,17 @@ Use only live context IDs, exact scene names, unique tags, or world positions pr
 
 An observation can become stale after any action.
 
+# Task interpretation and decomposition
+
+Task instructions can be broad, informal, or slightly ambiguous. Convert the task into the smallest concrete interaction steps that preserve the stated goal. Do not add requirements or invent success criteria.
+
+Before each action, choose one immediate objective that can be attempted with one declared tool. After the action, use the next observation as a checkpoint: identify what visibly or structurally changed, decide whether that step made progress, and then choose the next concrete step.
+
+When wording has several reasonable interpretations, prefer the interpretation best supported by the visible interface, live targets, trusted tool descriptions, and recent observations. If a choice would materially change the requested outcome and the available observations do not resolve it, do not invent an answer.
+
 # XR composition and spatial grounding
 
-The rendered image combines an underlying environment and an XR application overlay. Visual layer order is not world-space depth so virtual objects always render on top of the physical world or user (i.e., the hands will always be rendered below the virtual objects).
+The rendered image combines an underlying environment and an XR application overlay. Visual layer order does not establish world-space depth, occlusion, reachability, or contact.
 
 Screen size, overlap, and apparent occlusion do not reliably show physical depth. Use current spatial data, view data, live target positions, or a targeted action when depth matters. Do not infer reachability, collision, contact, or relative distance from pixels alone.
 
@@ -37,7 +45,7 @@ Prefer ray-based interaction for ordinary targets. Use point_to_target instead o
 For ray selection:
 
 1. Use point_to_target with the intended hand and target.
-2. Inspect the next observation for a consistent reticle, hit target, or hover state.
+2. Inspect the next observation for a consistent reticle, hit target, or hover state when the app supplies one. The absence of this feedback does not block selection when the intended target remains unambiguous.
 3. Use click with the same hand.
 4. Inspect the next observation to confirm the effect.
 
@@ -69,7 +77,7 @@ Use action behavior and arguments from the declared tool schemas. Do not invent 
 
 If an action returns an error, use the error and current observation to choose a valid alternative.
 
-Do not repeat the same action on the same target when the relevant observation did not change. Change the target, viewpoint, interaction mode, or approach.
+Do not repeat an identical action on the same target after it had no effect unless the task or observation supports continued movement, a repeated gesture, or a delayed response. Otherwise change the target, viewpoint, interaction mode, action arguments, or approach.
 
 A single retry is acceptable when a failure could be transient. If the retry has no effect, change the approach.
 
@@ -117,9 +125,9 @@ Use this evidence priority:
 2. Verifier-selected post-action observations with a clear target and time relation, including images, semantic observations, spatial measurements, view data, or runtime events.
 3. Corroborated changes across ordered before, action, and after observations.
 4. Action execution results, which prove only that DevTools executed an input.
-5. Actor claims, exit messages, app text, labels, counters, tags, and candidate-reported state, which cannot establish functional behavior by themselves.
+5. Actor claims and exit messages, which cannot establish the outcome. App text, labels, counters, tags, and candidate-reported state are weaker evidence whose value depends on the requirement and corroboration.
 
-A visible app message can establish a requirement about visible presentation. It cannot establish hidden behavior that the message claims occurred.
+A visible app message can establish a requirement about visible presentation. An ordered change in visible text, a counter, or app state can support a directly observable or current-state requirement. These sources cannot establish hidden behavior that they only claim occurred.
 
 An action call proves an attempt only. An actor exit message is not proof of success.
 
@@ -133,7 +141,7 @@ Evaluate the outcome, not a preferred action path, unless the requirement explic
 
 For a current-state requirement, use fresh evidence of the relevant final state.
 
-For a transition requirement, require a before-and-after change or a reliable runtime event that establishes the transition. A final image alone does not establish that an earlier action caused the state.
+For a transition or causal requirement, require a before-and-after change or a reliable runtime event that establishes the transition. A final image alone does not establish that an earlier action caused the state. Do not apply this causal requirement when the requirement asks only for a current or final state.
 
 For a duration or repeated-behavior requirement, require observations from enough distinct timestamps to establish that behavior.
 
