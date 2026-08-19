@@ -1,0 +1,586 @@
+{
+  "name": "xrblocks-sample-agent-evaluation",
+  "runs": 1,
+  "session": {
+    "realTime": false
+  },
+  "agent": {
+    "maxTurns": 30,
+    "context": "all"
+  },
+  "cases": [
+    {
+      "name": "model-viewer-globe-rotation",
+      "sample": "samples/spatial_ui/modelviewer",
+      "action": "Select the globe and drag it left, then drag it right. Observe the globe after each drag.",
+      "judge": "The globe rotates in the direction of each left and right drag.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "model-viewer-platform-movement",
+      "sample": "samples/spatial_ui/modelviewer",
+      "action": "Move one displayed object at a time. First point at the visible model and observe its hover target. Then move the pointing ray downward onto the platform directly below that model. Inspect the next observation and do not start selection until the platform, rather than the model, is the current hit or hover target. Hold selection on the platform, drag it to a new position, release it, and observe the model's position. Repeat this sequence for each displayed object.",
+      "judge": "Every displayed object's platform allows that object to be moved by dragging the platform.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 50
+      }
+    },
+    {
+      "name": "model-viewer-model-rotation",
+      "sample": "samples/spatial_ui/modelviewer",
+      "action": "Rotate one displayed model at a time. Point at the visible model and inspect the next observation to confirm that the model itself, not its platform, is the current hit or hover target. Hold selection on the model, move the pointing ray sideways, release it, and observe the result. Repeat this sequence for each displayed model.",
+      "judge": "Dragging a displayed model directly rotates the model and does not move it by its platform.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 50
+      }
+    },
+    {
+      "name": "object-interaction-ray-selection-color",
+      "sample": "templates/02_object_interaction",
+      "action": "Point the hand ray at the Interactive cube. Hold ray selection on the cube and observe its color while selection remains held. Release selection and observe the cube again.",
+      "judge": "The cube becomes blue while selected by a pointing ray and returns to yellow after the ray selection is released.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "object-interaction-direct-touch-color",
+      "sample": "templates/02_object_interaction",
+      "action": "Use direct touch rather than a pointing ray. Move one index fingertip into contact with the Interactive cube, observe its color during contact, then move the fingertip away and observe the cube again.",
+      "judge": "The cube becomes green during direct fingertip contact and returns to yellow after contact ends.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "spatial-placement-depth-sphere",
+      "sample": "templates/03_spatial_placement",
+      "action": "Aim a hand ray at an observed environment depth surface. Confirm that the Depth hit preview is visible at the ray intersection, select that surface once, and observe the result after selection.",
+      "judge": "A translucent depth-hit preview appears on the targeted environment surface, and selection leaves a solid placed sphere at that surface location.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "portals-place-on-surface",
+      "sample": "samples/advanced/portals",
+      "action": "Use ray selection to click one visible portal disc once and pick it up. Observe its held appearance. Then aim at a different observed location on the environment depth surface and click once to place the held portal. Observe its final position.",
+      "judge": "The selected portal enters a held state, moves from its original gallery position to a different environment surface, and remains at the new position after placement.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "portals-cosmic-traversal",
+      "sample": "samples/advanced/portals",
+      "action": "Locate the portal labeled Cosmic. Use current spatial observations to move in front of its center, then move forward through the portal plane. Observe the scene before crossing and after the transition completes.",
+      "judge": "Crossing the Cosmic portal changes the visible gallery into the immersive Cosmic environment and exposes the exit portal back to the room.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "environment-physics-projectile-motion",
+      "sample": "templates/10_environment_physics",
+      "action": "Aim toward visible environment geometry and click once to launch a projectile. Observe the projectile at multiple later times as it moves away from its launch position.",
+      "judge": "A projectile appears after selection and changes position over subsequent observations as the environment physics simulation advances.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "spatial-ui-hello-updates-status",
+      "sample": "templates/01_spatial_ui",
+      "action": "Select the Hello button once and observe the status text at the bottom of the card.",
+      "judge": "Selecting Hello changes the status text to 'Hello from your spatial UI.'",
+      "expectedVerdict": true
+    },
+    {
+      "name": "spatial-ui-hello-leaves-default-status",
+      "sample": "templates/01_spatial_ui",
+      "action": "Select the Hello button once and observe the status text at the bottom of the card.",
+      "judge": "Selecting Hello leaves the status text as 'Choose an action.'",
+      "expectedVerdict": false
+    },
+    {
+      "name": "spatial-ui-reset-restores-status",
+      "sample": "templates/01_spatial_ui",
+      "action": "Select Hello and observe the changed status. Then select Reset and observe the final status.",
+      "judge": "Selecting Reset after Hello restores the status text to 'Choose an action.'",
+      "expectedVerdict": true
+    },
+    {
+      "name": "spatial-ui-reset-keeps-hello-status",
+      "sample": "templates/01_spatial_ui",
+      "action": "Select Hello and observe the changed status. Then select Reset and observe the final status.",
+      "judge": "Selecting Reset after Hello leaves the final status as 'Hello from your spatial UI.'",
+      "expectedVerdict": false
+    },
+    {
+      "name": "occlusion-cat-environment",
+      "sample": "samples/xr_realism/occlusion",
+      "action": "Click a surface to place the cat. Move and place the cat behind environmental geometry until the cat is visibly occluded. Observe the final placement.",
+      "judge": "The environment properly occludes the cat when the cat is placed behind environmental geometry.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "occlusion-cat-shadows",
+      "sample": "samples/xr_realism/occlusion",
+      "action": "Click a surface to place the cat. Move the cat to another environmental surface and observe the cat and its shadow after placement.",
+      "judge": "The placed cat's shadows render properly in the environment.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "reticle-place-and-drag-marker",
+      "sample": "samples/xr_realism/reticle",
+      "action": "Point at an environment surface, begin held selection to create a marker, move the pointing ray to a different surface location while selection remains held, then release. Observe the marker while dragging and after release.",
+      "judge": "The marker created when selection begins follows the pointing ray while held and remains at the release location.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "head-gesture-nod-up",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Move your head upward and return it to the starting orientation to complete one upward nod. Observe the gesture panel.",
+      "judge": "The gesture panel reports nod-up for the upward nod.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "head-gesture-shake-right",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Turn your head right and return it to the starting orientation to complete one right shake. Observe the gesture panel.",
+      "judge": "The gesture panel reports shake-right for the right head movement.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "head-gesture-nod-up-reported-as-shake",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Move your head upward and return it to the starting orientation to complete one upward nod. Observe the gesture panel.",
+      "judge": "The gesture panel reports shake-left for the upward nod.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "head-gesture-shake-right-reported-as-nod",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Turn your head right and return it to the starting orientation to complete one right shake. Observe the gesture panel.",
+      "judge": "The gesture panel reports nod-down for the right head movement.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "head-gesture-nod-down-reported-as-shake",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Move your head downward and return it to the starting orientation to complete one downward nod. Observe the gesture panel.",
+      "judge": "The gesture panel reports shake-right for the downward nod.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "head-gesture-shake-left-reported-as-nod",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Turn your head left and return it to the starting orientation to complete one left shake. Observe the gesture panel.",
+      "judge": "The gesture panel reports nod-up for the left head movement.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "xr-emoji-victory-confetti",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a victory sign with one hand and observe the application response.",
+      "judge": "Making a victory sign causes confetti to spawn.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "xr-emoji-thumbs-up-balloons",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a thumbs-up gesture with one hand and observe the application response.",
+      "judge": "Making a thumbs-up gesture causes balloons to spawn.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "xr-emoji-victory-balloons",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a victory sign with one hand and observe the application response.",
+      "judge": "Making a victory sign causes balloons to spawn instead of confetti.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "xr-emoji-thumbs-up-confetti",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a thumbs-up gesture with one hand and observe the application response.",
+      "judge": "Making a thumbs-up gesture causes confetti to spawn instead of balloons.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "xr-emoji-thumbs-down-balloons",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a thumbs-down gesture with one hand and observe the application response.",
+      "judge": "Making a thumbs-down gesture causes balloons to spawn.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "hand-gestures-thumbs-down",
+      "sample": "samples/xr_interaction/hand_gestures",
+      "action": "Make a thumbs-down gesture with one hand and observe the gesture display.",
+      "judge": "The application detects and displays the thumbs-down gesture.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "paint-held-drag-creates-stroke",
+      "sample": "samples/advanced/paint",
+      "action": "Aim the right hand at open space, start and hold selection, move the hand through at least three distinct positions while selection remains held, then release. Observe the line during the movement and after release.",
+      "judge": "A visible painted stroke is created along the held hand movement and remains after select is released.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "paint-held-drag-no-stroke",
+      "sample": "samples/advanced/paint",
+      "action": "Aim the right hand at open space, start and hold selection, move the hand through at least three distinct positions while selection remains held, then release. Observe the line during the movement and after release.",
+      "judge": "The held hand movement creates no painted stroke and leaves the scene unchanged.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "paint-held-drag-stroke-disappears",
+      "sample": "samples/advanced/paint",
+      "action": "Aim the right hand at open space, start and hold selection, move the hand through at least three distinct positions while selection remains held, then release. Observe the line during the movement and after release.",
+      "judge": "The painted stroke disappears immediately when select is released.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-play-hides-instructions",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select the Play button once. Observe the instruction panel and balloon score after the selection.",
+      "judge": "Selecting Play removes the Balloon Pop instruction panel.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "balloon-pop-play-increments-score",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select the Play button once. Observe the instruction panel and balloon score after the selection.",
+      "judge": "Selecting Play pops one balloon and changes the score from 0 / 10 to 1 / 10.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-play-keeps-instructions",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select the Play button once. Observe the instruction panel and balloon score after the selection.",
+      "judge": "Selecting Play leaves the Balloon Pop instruction panel visible.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-collision-and-score",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Click the Play button. Choose one visible balloon, aim the hand at it, hold selection to prepare a dart, then release selection to launch the dart. Observe the balloon and score after the collision. Adjust the aim and try another visible balloon if the first dart misses.",
+      "judge": "A launched dart collides with a balloon, that balloon disappears, and the displayed popped-balloon count increases.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "balloon-pop-increase-count",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Increase Balloons button once and observe the displayed balloon score and total.",
+      "judge": "Selecting Increase Balloons once changes the displayed total from 10 to 11 while the popped score remains 0.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "balloon-pop-increase-count-decreases",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Increase Balloons button once and observe the displayed balloon score and total.",
+      "judge": "Selecting Increase Balloons once changes the displayed total from 10 to 9.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-increase-count-unchanged",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Increase Balloons button once and observe the displayed balloon score and total.",
+      "judge": "Selecting Increase Balloons once leaves the displayed total unchanged at 10.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-hide-collapses-controls",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Hide button in Balloon controls once and observe the button label and controls.",
+      "judge": "Selecting Hide collapses the balloon controls and changes the button label to Show.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "balloon-pop-hide-keeps-controls-expanded",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Hide button in Balloon controls once and observe the button label and controls.",
+      "judge": "Selecting Hide leaves the balloon controls fully expanded and leaves the button label as Hide.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "balloon-pop-hide-increments-score",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Then select the Hide button in Balloon controls once and observe the button label and balloon score.",
+      "judge": "Selecting Hide pops one balloon and changes the score from 0 / 10 to 1 / 10.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "screen-wiper-two-hand-clearing",
+      "sample": "samples/advanced/screenwiper",
+      "action": "Begin selection with the left hand, then begin selection with the right hand so both controllers are active. Move both hands across different parts of the covered screen while keeping selection held, then release both hands. Observe the screen throughout the movement.",
+      "judge": "The covered screen becomes visibly cleared along the paths of both controllers while their selections are held.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "splash-environment-paint-decals",
+      "sample": "samples/advanced/splash",
+      "action": "Aim a hand ray at observed environment geometry. Hold selection long enough to launch paintballs, then release and observe the impact area after the paintballs collide with the environment.",
+      "judge": "Launched paintballs collide with environment geometry and leave persistent colored paint splashes at their impact locations.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "rain-depth-surface-splashes",
+      "sample": "samples/advanced/rain",
+      "action": "Keep visible environment depth geometry in view and observe the rain over several distinct times. Wait between observations so falling drops can reach the environment surface. If necessary, change the view to include a clear depth surface and continue observing the impact area.",
+      "judge": "Across the ordered observations, raindrops fall until they intersect visible environment depth geometry and produce splash animations at the depth-surface impact locations instead of continuing through the surface.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 12
+      }
+    },
+    {
+      "name": "ball-pit-held-select-launches-balls",
+      "sample": "samples/advanced/ballpit",
+      "action": "Hold select with the right hand for at least one second, then release it. Observe the space in front of the hand during and after the hold.",
+      "judge": "Holding select launches multiple colored balls from the right hand into the scene.",
+      "expectedVerdict": true
+    },
+    {
+      "name": "ball-pit-held-select-launches-no-balls",
+      "sample": "samples/advanced/ballpit",
+      "action": "Hold select with the right hand for at least one second, then release it. Observe the space in front of the hand during and after the hold.",
+      "judge": "Holding select launches no balls and leaves the scene empty.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "ball-pit-held-select-one-stationary-ball",
+      "sample": "samples/advanced/ballpit",
+      "action": "Hold select with the right hand for at least one second, then release it. Observe the space in front of the hand during and after the hold.",
+      "judge": "Holding select creates exactly one ball that remains stationary at the right hand.",
+      "expectedVerdict": false
+    },
+    {
+      "name": "hard-model-viewer-move-then-rotate",
+      "sample": "samples/spatial_ui/modelviewer",
+      "action": "Choose one displayed non-globe model and keep track of that same model throughout the task. First point at the model, move the ray downward until its platform is the confirmed hit target, hold selection on the platform, drag it to a clearly different position, and release. Record the model and platform positions. Then target the model itself rather than the platform, hold selection, drag the ray sideways to rotate the model, and release. Observe the same model after both interactions.",
+      "judge": "For the same displayed model, the platform drag first changes the model's world position, and the later direct model drag changes its rotation without undoing the platform movement.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "hard-model-viewer-modes-reversed",
+      "sample": "samples/spatial_ui/modelviewer",
+      "action": "Choose one displayed non-globe model and keep track of that same model throughout the task. First point at the model, move the ray downward until its platform is the confirmed hit target, hold selection on the platform, drag it to a clearly different position, and release. Record the model and platform positions. Then target the model itself rather than the platform, hold selection, drag the ray sideways to rotate the model, and release. Observe the same model after both interactions.",
+      "judge": "For the same displayed model, dragging its platform changes only the model's rotation, while the later direct model drag changes its world position without rotating it.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "hard-object-interaction-ray-then-touch",
+      "sample": "templates/02_object_interaction",
+      "action": "Interact with the same Interactive cube in two modes. First point at it with a hand ray, hold ray selection, observe its color, release, and observe its resting color. Then move the index fingertip into direct contact without using ray selection, observe the contact color, move the fingertip away, and observe the final color.",
+      "judge": "The same cube is blue during ray selection, yellow after ray release, green during direct fingertip contact, and yellow again after contact ends, in that order.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 35
+      }
+    },
+    {
+      "name": "hard-object-interaction-colors-reversed",
+      "sample": "templates/02_object_interaction",
+      "action": "Interact with the same Interactive cube in two modes. First point at it with a hand ray, hold ray selection, observe its color, release, and observe its resting color. Then move the index fingertip into direct contact without using ray selection, observe the contact color, move the fingertip away, and observe the final color.",
+      "judge": "The same cube is green during ray selection and blue during direct fingertip contact, with yellow only before the interactions.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 35
+      }
+    },
+    {
+      "name": "hard-spatial-placement-preview-and-commit",
+      "sample": "templates/03_spatial_placement",
+      "action": "Aim at one environment depth location and observe the translucent Depth hit preview there. Select that location to create the solid Placed depth hit. Then move the pointing ray to a clearly different depth location without selecting again. Observe both the moving preview and the previously placed sphere.",
+      "judge": "After one selection, the translucent preview follows the ray to the second depth location while the solid placed sphere remains at the first selected location.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 30
+      }
+    },
+    {
+      "name": "hard-spatial-placement-solid-follows-preview",
+      "sample": "templates/03_spatial_placement",
+      "action": "Aim at one environment depth location and observe the translucent Depth hit preview there. Select that location to create the solid Placed depth hit. Then move the pointing ray to a clearly different depth location without selecting again. Observe both the moving preview and the previously placed sphere.",
+      "judge": "Without a second selection, both the translucent preview and the solid placed sphere move together to the second depth location.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 30
+      }
+    },
+    {
+      "name": "hard-xr-emoji-ordered-reactions",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a victory gesture with the right hand and observe the status and reaction. Return the hand to a relaxed pose and observe the status reset. Then make a thumbs-up gesture with the same hand and observe the second status and reaction.",
+      "judge": "The ordered reactions are victory status with confetti first, a reset after relaxing the hand, and then thumbs-up status with balloons.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 20
+      }
+    },
+    {
+      "name": "hard-xr-emoji-reactions-reversed",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Make a victory gesture with the right hand and observe the status and reaction. Return the hand to a relaxed pose and observe the status reset. Then make a thumbs-up gesture with the same hand and observe the second status and reaction.",
+      "judge": "The ordered reactions are victory status with balloons first, followed by thumbs-up status with confetti.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 20
+      }
+    },
+    {
+      "name": "hard-balloon-pop-configure-then-score",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Increase the balloon total exactly once and confirm the display reads 0 / 11. Then aim at one visible balloon, hold selection to prepare a dart, release to launch it, and observe until a balloon is hit. Retry with a corrected aim if necessary, then inspect the final score.",
+      "judge": "The sequence closes the instructions, changes the total from 10 to 11 before the shot, and ends at 1 / 11 after exactly one observed balloon pop.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "hard-balloon-pop-score-ignores-config",
+      "sample": "samples/advanced/balloonpop",
+      "action": "Select Play to close the instructions. Increase the balloon total exactly once and confirm the display reads 0 / 11. Then aim at one visible balloon, hold selection to prepare a dart, release to launch it, and observe until a balloon is hit. Retry with a corrected aim if necessary, then inspect the final score.",
+      "judge": "After increasing the balloon total to 11 and popping one balloon, the final display is 1 / 10 because the count change is discarded when the dart hits.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "hard-reticle-two-marker-identity",
+      "sample": "samples/xr_realism/reticle",
+      "action": "Create a first marker with held selection, move the pointing ray to drag it to a distinct location, and release. Record its final location. Then begin a new held selection at another surface location to create a second marker, drag only that active marker elsewhere, and release. Observe both markers after the second release.",
+      "judge": "Two distinct markers remain: the first marker stays at its first release location while only the second marker follows the second held drag and remains at its own release location.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "hard-reticle-first-marker-follows-second-drag",
+      "sample": "samples/xr_realism/reticle",
+      "action": "Create a first marker with held selection, move the pointing ray to drag it to a distinct location, and release. Record its final location. Then begin a new held selection at another surface location to create a second marker, drag only that active marker elsewhere, and release. Observe both markers after the second release.",
+      "judge": "When the second marker is dragged, the first marker also leaves its original release location and follows the same second drag path.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 40
+      }
+    },
+    {
+      "name": "hard-portal-relocate-then-traverse",
+      "sample": "samples/advanced/portals",
+      "action": "Locate the Cosmic portal and record its initial position. Click its disc once to pick it up, then click a different environment depth location to place it. Confirm that the same Cosmic portal remains at the new location. Move in front of its relocated center and cross through its plane. Observe the gallery before placement, the relocated portal, and the scene after crossing.",
+      "judge": "The same Cosmic portal first moves to a new environment surface and remains there, and crossing the relocated portal then transitions from the gallery into the immersive Cosmic environment.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "hard-portal-traversal-ignores-relocation",
+      "sample": "samples/advanced/portals",
+      "action": "Locate the Cosmic portal and record its initial position. Click its disc once to pick it up, then click a different environment depth location to place it. Confirm that the same Cosmic portal remains at the new location. Move in front of its relocated center and cross through its plane. Observe the gallery before placement, the relocated portal, and the scene after crossing.",
+      "judge": "The Cosmic portal remains at its original gallery position after placement, and the transition occurs by crossing that original position rather than the relocated portal.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 60
+      }
+    },
+    {
+      "name": "long-vague-rps-game-loop-works",
+      "sample": "samples/xr_interaction/rock_paper_scissors",
+      "action": "Use the app as a person would and play Rock Paper Scissors for a while. Try different throws, recover if a gesture is missed, and exercise enough complete rounds to determine whether the game works as a whole.",
+      "judge": "Across the long session, thumbs up starts new rounds, the countdown reaches a throw window, multiple rock, paper, or scissors gestures are captured, each completed round shows both choices and the correct outcome under these rules: rock beats scissors, scissors beats paper, paper beats rock, and equal choices tie. The game returns to a ready state so another round can start.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 90
+      }
+    },
+    {
+      "name": "long-vague-rps-outcome-rule-error",
+      "sample": "samples/xr_interaction/rock_paper_scissors",
+      "action": "Use the app as a person would and play Rock Paper Scissors for a while. Try different throws, recover if a gesture is missed, and exercise enough complete rounds to determine whether the game works as a whole.",
+      "judge": "During the completed rounds, at least one displayed outcome contradicts these rules: rock beats scissors, scissors beats paper, paper beats rock, and equal choices tie.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 90
+      }
+    },
+    {
+      "name": "long-vague-head-gestures-remain-responsive",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Explore the head gesture demo for an extended session. Try gestures in every useful direction, repeat some of them, and inspect the panel often enough to determine whether recognition remains useful rather than testing only one movement.",
+      "judge": "Across the extended session, the panel reports matching nod-up, nod-down, shake-left, and shake-right results for the corresponding movements and continues to update correctly when gestures are repeated later.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 80
+      }
+    },
+    {
+      "name": "long-vague-head-gestures-eventually-invert",
+      "sample": "samples/xr_interaction/head_gestures",
+      "action": "Explore the head gesture demo for an extended session. Try gestures in every useful direction, repeat some of them, and inspect the panel often enough to determine whether recognition remains useful rather than testing only one movement.",
+      "judge": "During the extended session, at least one repeated head movement is eventually reported as its opposite direction even though the earlier matching movement was recognized correctly.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 80
+      }
+    },
+    {
+      "name": "long-vague-xr-emoji-retriggers-reactions",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Use the XR Emoji app for a while and explore its supported reactions. Alternate gestures, let reactions and status messages reset, use both hands when useful, and do enough cycles to determine whether the app remains responsive over time.",
+      "judge": "Across multiple cycles, victory repeatedly produces the matching Victory status and confetti, thumbs up repeatedly produces the matching Thumbs up status and balloons, each gesture can end and reset the status, and later supported gestures still trigger new reactions.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 70
+      }
+    },
+    {
+      "name": "long-vague-xr-emoji-stops-after-first-cycle",
+      "sample": "samples/xr_interaction/xr_emoji",
+      "action": "Use the XR Emoji app for a while and explore its supported reactions. Alternate gestures, let reactions and status messages reset, use both hands when useful, and do enough cycles to determine whether the app remains responsive over time.",
+      "judge": "After the first completed reaction and status reset, every later supported victory or thumbs-up gesture is ignored and produces no new status or visual reaction.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 70
+      }
+    },
+    {
+      "name": "long-vague-hand-gesture-recognition-works",
+      "sample": "samples/xr_interaction/hand_gestures",
+      "action": "Spend an extended session exploring the hand gesture recognition app. Wait for it to become ready, try a broad variety of supported static poses on both hands, return to a relaxed pose between attempts, and inspect both hand panels often enough to determine whether recognition works beyond one example.",
+      "judge": "After the model becomes ready, the left and right panels independently show matching labels for a broad variety of attempted poses, including fist, thumbs up, thumbs down, point, victory, and rock, and continue updating across both hands during the session.",
+      "expectedVerdict": true,
+      "agent": {
+        "maxTurns": 90
+      }
+    },
+    {
+      "name": "long-vague-hand-gesture-panels-swap-hands",
+      "sample": "samples/xr_interaction/hand_gestures",
+      "action": "Spend an extended session exploring the hand gesture recognition app. Try a broad variety of supported static poses on both hands, return to a relaxed pose between attempts, and inspect both hand panels often enough to determine whether recognition works beyond one example.",
+      "judge": "During the session, attempted poses are consistently reported only on the opposite hand panel while the panel for the hand making the pose remains NONE or OTHER.",
+      "expectedVerdict": false,
+      "agent": {
+        "maxTurns": 90
+      }
+    }
+  ]
+}
