@@ -224,38 +224,6 @@ function assertReachTarget(handIndex, target) {
   );
 }
 
-function indexFingertipReachTarget(handIndex, target) {
-  const camera = getCamera();
-  const destination = camera?.position?.clone?.();
-  if (!destination) return target;
-  if (Array.isArray(target)) {
-    destination.fromArray(target);
-  } else if (target?.getWorldPosition) {
-    target.getWorldPosition(destination);
-  } else {
-    return target;
-  }
-
-  const core = getCore();
-  const controller =
-    handIndex === 0
-      ? core.simulator?.hands?.leftController
-      : core.simulator?.hands?.rightController;
-  const fingertip =
-    core.input?.hands?.[handIndex]?.joints?.['index-finger-tip'];
-  if (!controller?.getWorldPosition || !fingertip?.getWorldPosition) {
-    return target;
-  }
-
-  controller.updateWorldMatrix?.(true, true);
-  fingertip.updateWorldMatrix?.(true, false);
-  const controllerPosition = destination.clone();
-  const fingertipPosition = destination.clone();
-  controller.getWorldPosition(controllerPosition);
-  fingertip.getWorldPosition(fingertipPosition);
-  return destination.sub(fingertipPosition.sub(controllerPosition));
-}
-
 function assertReachablePosition(handIndex, desired, reachDistance, action) {
   const origin =
     handIndex === 0

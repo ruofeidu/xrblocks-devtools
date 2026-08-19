@@ -357,9 +357,8 @@ window.__xrblocksDevtoolsRuntime = {
   },
   async reachTo(handIndex, target, options) {
     const resolvedTarget = resolveTarget(target);
-    const reachTarget = indexFingertipReachTarget(handIndex, resolvedTarget);
-    assertReachTarget(handIndex, reachTarget);
-    await getEmbodiedControl().reachTo(handIndex, reachTarget, options);
+    assertReachTarget(handIndex, resolvedTarget);
+    await getEmbodiedControl().reachTo(handIndex, resolvedTarget, options);
     return {completed: true};
   },
   async click(handIndex = 1, options) {
