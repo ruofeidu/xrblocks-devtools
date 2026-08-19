@@ -67,7 +67,7 @@ export async function main(argv = process.argv.slice(2), signal?: AbortSignal) {
       return result.status === 'valid' ? 0 : 1;
     }
     case 'agent': {
-      createAiModel(command.model);
+      await createAiModel(command.model);
       const session = await XRBlocksSession.open(command.session);
       const result = await session
         .act(command.task, {

@@ -174,7 +174,7 @@ export async function runSessionAct(
 
   try {
     options.signal?.throwIfAborted();
-    const model = dependencies.model ?? createAiModel(modelName);
+    const model = dependencies.model ?? (await createAiModel(modelName));
     let observation = await observe();
     recordObservation(observation, 0, record);
     const messages: ModelMessage[] = [

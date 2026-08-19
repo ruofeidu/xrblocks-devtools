@@ -213,12 +213,41 @@ The agent command accepts all Interact session and recording flags plus:
 | `-h`, `--help`                     | Show command help.                                                                                                                                     |
 
 At startup, the CLI loads an optional `.env` file from the current working
-directory. Existing shell variables take priority. Set
-`GOOGLE_GENERATIVE_AI_API_KEY` there for AI features. Only `agent` requires the
-key before opening Chromium; `interact` can start without it.
+directory. Existing shell variables take priority. AI features use Google AI by
+default. Install its optional provider and set its API key:
+
+```sh
+npm install @ai-sdk/google
+```
+
+```env
+XRBLOCKS_DEV_TOOLS_AI_PROVIDER=google
+GOOGLE_GENERATIVE_AI_API_KEY=your-key
+```
+
+Only `agent` requires the provider before opening Chromium; `interact` can start
+without it.
 
 `GEMINI_API_KEY` is also accepted. Devtools maps it to
 `GOOGLE_GENERATIVE_AI_API_KEY` when the standard variable is not set.
+
+To use Vertex AI, install its optional provider:
+
+```sh
+npm install @ai-sdk/google-vertex
+```
+
+Then set the provider and Vertex configuration:
+
+```env
+XRBLOCKS_DEV_TOOLS_AI_PROVIDER=vertex
+GOOGLE_VERTEX_PROJECT=your-project
+GOOGLE_VERTEX_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+Vertex uses Application Default Credentials. If
+`XRBLOCKS_DEV_TOOLS_AI_PROVIDER` is not set, the tool uses `google`.
 
 Set `XRBLOCKS_DEVTOOLS_BROWSER_PROFILE=container` when running in Docker or
 containerized CI environments. This launches Chromium with container-friendly
@@ -578,7 +607,8 @@ const session = await XRBlocksSession.open({
 ```
 
 `session.act()` is a programmatic action loop built on AI SDK Core. It requires
-`GOOGLE_GENERATIVE_AI_API_KEY`, the standard AI SDK Google provider variable.
+the credentials for the selected AI provider. Google AI uses
+`GOOGLE_GENERATIVE_AI_API_KEY`. Vertex AI uses Application Default Credentials.
 It returns a status, token and turn usage, and a complete trajectory. A
 completed run also contains the agent's `exit` message and any optional JSON
 data.

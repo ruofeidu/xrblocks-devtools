@@ -45,7 +45,7 @@ export interface JudgeOptions {
 }
 
 type JudgeDependencies = {
-  createModel?: (model?: string) => LanguageModel;
+  createModel?: (model?: string) => LanguageModel | Promise<LanguageModel>;
   generateText?: typeof generateText;
 };
 
@@ -62,10 +62,11 @@ export async function judgeWithSystemInstruction<T = unknown>(
   try {
     const content = judgeContent(options);
     const runGenerateText = dependencies.generateText ?? generateText;
+    const model = await (dependencies.createModel ?? createAiModel)(
+      resolveJudgeModel(options.model)
+    );
     const result = await runGenerateText({
-      model: (dependencies.createModel ?? createAiModel)(
-        resolveJudgeModel(options.model)
-      ),
+      model,
       instructions: systemInstruction,
       messages: [{role: 'user', content}],
       output: Output.object<T>({schema: jsonSchema<T>(options.schema)}),
