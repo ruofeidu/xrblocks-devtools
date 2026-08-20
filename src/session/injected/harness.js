@@ -183,11 +183,15 @@ function resolveNavigationPosition(target) {
 }
 
 function getDevtoolsContext(options = {}) {
+  const includeLocations = options.locations === true;
   const includeTags = options.tags === true;
   const includeState = options.state === true;
   const includeSpatial = options.spatial === true;
   const includeView = options.view === true;
   const result = {};
+  if (includeLocations) {
+    result.locations = getCore().simulator.getLocations();
+  }
   if (includeTags) result.tags = [];
   if (includeState) result.state = [];
   if (includeSpatial) result.spatial = [];

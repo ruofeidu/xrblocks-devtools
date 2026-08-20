@@ -14,7 +14,7 @@ const sessionCommands = [
   ],
   [
     'getDevtoolsContext',
-    'getDevtoolsContext({tags?, state?, spatial?, view?})',
+    'getDevtoolsContext({locations?, tags?, state?, spatial?, view?})',
   ],
   ['getSimulatorState', 'getSimulatorState()'],
   ['navigateTo', 'navigateTo(target)'],

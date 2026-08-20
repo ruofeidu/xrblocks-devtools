@@ -201,16 +201,16 @@ xrblocks-devtools agent (--app-dir <dir> | --url <url>) --task <text> [options]
 
 The agent command accepts all Interact session and recording flags plus:
 
-| Flag                               | Value and behavior                                                                                                                                     |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--task <text>`                    | Required natural-language task.                                                                                                                        |
-| `--model <model>`                  | Gemini model. Default `gemini-3.6-flash`.                                                                                                              |
-| `--max-turns <count>`              | Positive model-turn limit. Default `30`.                                                                                                               |
-| `--judge-trajectory <requirement>` | Judge the completed trajectory and print both the action result and `{verdict, reason}`.                                                               |
-| `--record-agent <dir>`             | Write each trajectory as JSONL and save its observation images.                                                                                        |
-| `--observations <kinds>`           | `all` or comma-separated `image`, `semantic-tree`, `visible`, `som`, `devtools-tags`, `state`, `spatial`, and/or `view`. The default excludes `state`. |
-| `--quiet`                          | Suppress progress events on stderr.                                                                                                                    |
-| `-h`, `--help`                     | Show command help.                                                                                                                                     |
+| Flag                               | Value and behavior                                                                                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--task <text>`                    | Required natural-language task.                                                                                                                                                     |
+| `--model <model>`                  | Gemini model. Default `gemini-3.6-flash`.                                                                                                                                           |
+| `--max-turns <count>`              | Positive model-turn limit. Default `30`.                                                                                                                                            |
+| `--judge-trajectory <requirement>` | Judge the completed trajectory and print both the action result and `{verdict, reason}`.                                                                                            |
+| `--record-agent <dir>`             | Write each trajectory as JSONL and save its observation images.                                                                                                                     |
+| `--observations <kinds>`           | `all` or comma-separated `image`, `semantic-tree`, `visible`, `som`, `locations`, `devtools-tags`, `state`, `spatial`, and/or `view`. The default excludes `locations` and `state`. |
+| `--quiet`                          | Suppress progress events on stderr.                                                                                                                                                 |
+| `-h`, `--help`                     | Show command help.                                                                                                                                                                  |
 
 At startup, the CLI loads an optional `.env` file from the current working
 directory. Existing shell variables take priority. AI features use Google AI by

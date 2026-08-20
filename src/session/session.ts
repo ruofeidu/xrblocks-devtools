@@ -331,6 +331,7 @@ export class XRBlocksSession {
   }
 
   getDevtoolsContext(options: {
+    locations?: boolean;
     tags?: boolean;
     state?: boolean;
     spatial?: boolean;

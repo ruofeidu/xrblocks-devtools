@@ -17,6 +17,7 @@ type InjectedWindow = {
       view?: {inFrustum: boolean};
     };
     getDevtoolsContext(options: object): {
+      locations?: Record<string, unknown>;
       tags?: Array<Record<string, unknown>>;
       state?: Array<Record<string, unknown>>;
       spatial?: Array<Record<string, unknown>>;
