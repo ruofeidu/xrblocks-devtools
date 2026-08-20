@@ -41,6 +41,8 @@ export interface SessionTestOptions extends XRBlocksTestOptions {
   scenes?: SceneVariant[];
   video?: string;
   realTime?: boolean;
+  /** Load and enforce the active simulator environment navmesh. */
+  simulatorNavMesh?: boolean;
   simulatorObjects?: SimulatorObjectInput[];
 }
 
@@ -110,6 +112,7 @@ export function it_session(
     scenes: _scenes,
     video: _video,
     realTime: _realTime,
+    simulatorNavMesh: _simulatorNavMesh,
     ...sharedOptions
   } = options;
   for (const run of plan.runs) {
@@ -143,6 +146,7 @@ export function it_session(
           meta,
           options.video,
           options.realTime ?? false,
+          options.simulatorNavMesh,
           options.simulatorObjects
         );
       }
@@ -260,6 +264,7 @@ async function runSessionTest(
   meta: XRBlocksTestMeta,
   videoName: string | undefined,
   realTime: boolean,
+  simulatorNavMesh?: boolean,
   simulatorObjects?: SimulatorObjectInput[]
 ): Promise<void> {
   const provided = inject('xrblocksTest');
@@ -306,6 +311,7 @@ async function runSessionTest(
         },
       },
       timeoutMs: provided.sessionTimeoutMs,
+      simulatorNavMesh,
       simulatorObjects,
       signal: context.signal,
     });
